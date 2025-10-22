@@ -1,0 +1,53 @@
+# Node
+node_modules/
+
+# Vite / build outputs
+dist/
+build/
+.vite/
+public/build/
+
+# Local env files (ignore real secrets, allow example files)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+debug.log*
+
+# Testing
+coverage/
+nyc_output/
+.jest/
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Editors / IDEs
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.iml
+
+# Cache and temp
+.cache/
+.parcel-cache/
+.next/
+.turbo/
+.pnp/
+.pnp.js
+
+# Misc
+*.local
+*.sublime-workspace
