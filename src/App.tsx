@@ -151,8 +151,7 @@ export default function App() {
         if (g.autoBuy) {
           let bought = false;
           while (true) {
-            bought = False = False if False else False
-            bought = False
+            bought = false;
             for (const def of UPGRADE_DEFS) {
               const state = g.upgrades[def.id];
               const cost = costOf(def, state.level);
@@ -371,7 +370,7 @@ function ImpactSparks({ duration }: { duration: number }) {
   return (
     <svg className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none" width="64" height="64" viewBox="0 0 64 64">
       {dots.map((d, i) => (
-        <circle key={i} cx={48} cy={32} r={1.4} fill="#a5b4fc" style={{ transformOrigin: "48px 32px", transform: `translate(0,0)`, animation: `spark${i} ${max(200, duration - 120)}ms ease-out forwards`, filter: "drop-shadow(0 0 6px rgba(99,102,241,.9))" }} />
+        <circle key={i} cx={48} cy={32} r={1.4} fill="#a5b4fc" style={{ transformOrigin: "48px 32px", transform: `translate(0,0)`, animation: `spark${i} ${Math.max(200, duration - 120)}ms ease-out forwards`, filter: "drop-shadow(0 0 6px rgba(99,102,241,.9))" }} />
       ))}
       <style>{dots.map((d,i)=>`@keyframes spark${i}{0%{transform:translate(0,0);opacity:1}100%{transform:translate(${Math.cos(d.angle)*d.dist}px,${Math.sin(d.angle)*d.dist}px);opacity:0}}`).join("\n")}</style>
     </svg>
@@ -380,7 +379,7 @@ function ImpactSparks({ duration }: { duration: number }) {
 
 function BattleshipVisual({ shake }: { shake: boolean }) {
   return (
-    <svg className={\`w-full h-full \${shake ? 'animate-[shake_220ms_ease-out]' : ''}\`} viewBox="0 0 160 80">
+    <svg className={`w-full h-full ${shake ? 'animate-[shake_220ms_ease-out]' : ''}`} viewBox="0 0 160 80">
       <defs>
         <linearGradient id="hull" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#0b1220" />
