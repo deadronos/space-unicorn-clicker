@@ -42,14 +42,14 @@ Design decisions:
 
 | ID   | Description                                  | Status      | Updated    | Notes |
 |------|----------------------------------------------|-------------|------------|-------|
-| 5.1  | Add unicornCount to GameSnapshot             | Complete    | 2025-10-26 | Added to interface and all initializations |
-| 5.2  | Create Unicorn Squadron upgrade definition   | Complete    | 2025-10-26 | Added as 11th upgrade, costs 5000, mult 1.45 |
-| 5.3  | Implement DPS scaling per unicorn            | Complete    | 2025-10-26 | Each extra unicorn adds +1.5 DPS |
-| 5.4  | Add crit-based unicorn spawn chance          | Complete    | 2025-10-26 | 5% chance on crit to spawn unicorn |
-| 5.5  | Update visual rendering for multiple unicorns| Complete    | 2025-10-26 | Shows up to 5 unicorns with stagger |
-| 5.6  | Add visual feedback for unicorn spawn        | Complete    | 2025-10-26 | "NEW UNICORN!" notification added |
-| 5.7  | Test implementation                          | Complete    | 2025-10-26 | Tested with screenshots |
-| 5.8  | Update documentation                         | Complete    | 2025-10-26 | Task file updated |
+| 5.1  | Add unicornCount to GameSnapshot             | Completed   | 2025-10-26 | Added to interface and all initializations |
+| 5.2  | Create Unicorn Squadron upgrade definition   | Completed   | 2025-10-26 | Added as 11th upgrade, costs 5000, mult 1.45 |
+| 5.3  | Implement DPS scaling per unicorn            | Completed   | 2025-10-26 | Each extra unicorn adds +1.5 DPS |
+| 5.4  | Add crit-based unicorn spawn chance          | Completed   | 2025-10-26 | 5% chance on crit to spawn unicorn |
+| 5.5  | Update visual rendering for multiple unicorns| Completed   | 2025-10-26 | Shows up to 5 unicorns with stagger |
+| 5.6  | Add visual feedback for unicorn spawn        | Completed   | 2025-10-26 | "NEW UNICORN!" notification added |
+| 5.7  | Test implementation                          | Completed   | 2025-10-26 | Tested with screenshots |
+| 5.8  | Update documentation                         | Completed   | 2025-10-26 | Task file updated |
 
 ## Progress Log
 

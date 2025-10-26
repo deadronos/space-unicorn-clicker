@@ -13,10 +13,6 @@
 - [TASK003] Add Enhanced Visual Effects - Completed 2025-10-26
 - [TASK004] Implement Advanced Upgrade Types - Completed 2025-10-26
 
-## In Progress
-
-(none)
-
 ## Pending
 
 - [TASK001] Create tests for deriveStats and costOf - Started
