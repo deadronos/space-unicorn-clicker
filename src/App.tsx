@@ -41,6 +41,7 @@ interface GameSnapshot {
   totalPrestiges: number;
   comboCount: number;
   comboExpiry: number;
+  unicornCount: number;
 }
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(n, max));
@@ -104,12 +105,14 @@ const UPGRADE_DEFS: UpgradeDef[] = [
     apply: (g) => { const lvl = g.upgrades.momentum?.level ?? 0; g.clickDamage *= 1 + 0.05 * lvl; g.dps *= 1 + 0.05 * lvl; } },
   { id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
     apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; } },
+  { id: "squadron", name: "🦄 Unicorn Squadron", desc: "+1 unicorn, each adds +1.5 DPS", baseCost: 5000, costMult: 1.45,
+    apply: (g) => { const lvl = g.upgrades.squadron?.level ?? 0; g.unicornCount = 1 + lvl; g.dps += lvl * 1.5; } },
 ];
 
 function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
 function deriveStats(base: GameSnapshot): GameSnapshot {
-  const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3 };
+  const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, unicornCount: 1 };
   for (const def of UPGRADE_DEFS) def.apply(g);
   g.critChance = clamp(g.critChance, 0, 0.8);
   g.lootMultiplier *= getGemMultiplier(g.prestigeGems);
@@ -121,10 +124,12 @@ export default function App() {
   const [sparks, setSparks] = useState<{ id: number; start: number; duration: number }[]>([]);
   const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }[]>([]);
   const [explosions, setExplosions] = useState<{ id: number; start: number }[]>([]);
+  const [unicornSpawnNotifications, setUnicornSpawnNotifications] = useState<{ id: number; start: number }[]>([]);
   const beamId = useRef(0);
   const sparkId = useRef(0);
   const damageId = useRef(0);
   const explosionId = useRef(0);
+  const unicornNotificationId = useRef(0);
   const lastAutoBeam = useRef<number>(Date.now());
   const lastClickTime = useRef<number>(0);
 
@@ -132,8 +137,11 @@ export default function App() {
     const saved = loadState();
     if (saved) {
       const now = Date.now();
+      const allUpgrades = Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
+      const mergedUpgrades = { ...allUpgrades, ...saved.upgrades };
+      const savedWithUpgrades = { ...saved, upgrades: mergedUpgrades };
       const seconds = clamp((now - (saved.lastTick || now)) / 1000, 0, 60 * 60 * 8);
-      const derived = deriveStats(saved);
+      const derived = deriveStats(savedWithUpgrades);
       const dmg = derived.dps * seconds;
       let ship = { ...saved.ship };
       let stardust = saved.stardust;
@@ -148,12 +156,12 @@ export default function App() {
           stardust += reward; totalEarned += reward; ship = shipForLevel(ship.level + 1);
         }
       }
-      return { ...saved, stardust, totalEarned, ship, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0 };
+      return { ...savedWithUpgrades, stardust, totalEarned, ship, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0, unicornCount: saved.unicornCount ?? 1 };
     }
     return {
       stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
       ship: shipForLevel(1), upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), autoBuy: true, lastTick: Date.now(),
-      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0,
+      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0, unicornCount: 1,
     };
   });
 
@@ -166,6 +174,7 @@ export default function App() {
       setSparks((ss) => ss.filter((s) => now - s.start < s.duration));
       setDamageNumbers((dns) => dns.filter((dn) => now - dn.start < 1000));
       setExplosions((exs) => exs.filter((ex) => now - ex.start < 800));
+      setUnicornSpawnNotifications((usns) => usns.filter((usn) => now - usn.start < 2000));
       setGame((prev) => {
         if (prev.comboExpiry > 0 && now > prev.comboExpiry) {
           return { ...prev, comboCount: 0, comboExpiry: 0 };
@@ -264,6 +273,11 @@ export default function App() {
       }
       g.ship = ship; g.stardust = stardust; g.totalEarned = totalEarned;
       
+      if (isCrit && Math.random() < 0.05) {
+        g.unicornCount += 1;
+        setUnicornSpawnNotifications((usns) => [...usns, { id: ++unicornNotificationId.current, start: now }]);
+      }
+      
       setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: dmg, x, y, start: now, crit: isCrit }]);
       if (shipDestroyed) {
         setExplosions((exs) => [...exs, { id: ++explosionId.current, start: now }]);
@@ -290,7 +304,7 @@ export default function App() {
     if (!confirm("Reset all progress?")) return;
     const fresh = { stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
       ship: shipForLevel(1), upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), autoBuy: true, lastTick: Date.now(),
-      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0 } as GameSnapshot;
+      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0, unicornCount: 1 } as GameSnapshot;
     setGame(fresh); saveState(fresh);
   }
 
@@ -311,7 +325,8 @@ export default function App() {
       prestigeGems: game.prestigeGems + gemsToAward,
       totalPrestiges: game.totalPrestiges + 1,
       comboCount: 0,
-      comboExpiry: 0
+      comboExpiry: 0,
+      unicornCount: game.unicornCount
     } as GameSnapshot;
     setGame(prestiged); 
     saveState(prestiged);
@@ -357,6 +372,12 @@ export default function App() {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.1); }
         }
+        @keyframes unicornSpawn {
+          0% { transform: scale(0.5); opacity: 0; }
+          20% { transform: scale(1.3); opacity: 1; }
+          80% { transform: scale(1.1); opacity: 1; }
+          100% { transform: scale(0.8); opacity: 0; }
+        }
       `}</style>
       <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-3 flex items-center justify-between">
@@ -371,6 +392,9 @@ export default function App() {
             <div className="text-lg">Stardust: <span className="font-bold">{fmt(derived.stardust)}</span></div>
             <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance>0?`• Crit ${Math.round(derived.critChance*100)}% x${derived.critMult.toFixed(1)}`:""}</div>
             <div className="text-sm text-slate-400">Total Earned: {fmt(derived.totalEarned)}</div>
+            {derived.unicornCount > 1 && (
+              <div className="text-purple-400 text-sm mt-1">🦄 {derived.unicornCount} Unicorns in Squadron</div>
+            )}
             {game.comboCount >= 3 && (
               <div className="text-amber-400 font-bold text-lg mt-1" style={{ animation: 'comboPulse 0.5s ease-in-out infinite' }}>
                 🔥 {game.comboCount}x COMBO!
@@ -399,7 +423,20 @@ export default function App() {
               <div className="absolute inset-0 starfield">
                 <img src={UNICORN_IMG} alt="Space Unicorn" className="absolute left-2 bottom-2 h-40 w-auto object-contain select-none drop-shadow-[0_0_12px_rgba(99,102,241,.6)]"
                   onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none';}} />
-                <div className="absolute left-4 bottom-6 text-5xl select-none">🦄</div>
+                {Array.from({ length: Math.min(derived.unicornCount, 5) }).map((_, i) => (
+                  <div 
+                    key={i}
+                    className="absolute text-5xl select-none" 
+                    style={{ 
+                      left: `${4 + i * 8}%`, 
+                      bottom: `${6 + (i % 2) * 8}%`,
+                      opacity: 0.9 - i * 0.1,
+                      transform: `scale(${1 - i * 0.1})`
+                    }}
+                  >
+                    🦄
+                  </div>
+                ))}
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
                   <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
@@ -421,6 +458,17 @@ export default function App() {
                   <div key={ex.id} className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24 pointer-events-none">
                     <div className="w-full h-full rounded-full bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 opacity-80" 
                       style={{ animation: 'explosion 0.8s ease-out forwards' }} />
+                  </div>
+                ))}
+                {unicornSpawnNotifications.map((usn) => (
+                  <div key={usn.id} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="text-4xl font-bold text-purple-400" 
+                      style={{ 
+                        textShadow: '0 0 20px rgba(192,132,252,0.8), 0 0 40px rgba(192,132,252,0.5)',
+                        animation: 'unicornSpawn 2s ease-out forwards'
+                      }}>
+                      🦄 NEW UNICORN! 🦄
+                    </div>
                   </div>
                 ))}
               </div>

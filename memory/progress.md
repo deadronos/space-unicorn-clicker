@@ -2,6 +2,36 @@
 
 ## 2025-10-26
 
+### Unicorn Squadron Feature ✅ (TASK005)
+
+Successfully implemented unicorn spawning upgrade system with dynamic mechanics:
+
+**Core Implementation**
+- Added `unicornCount` field to GameSnapshot (default: 1)
+- Created new upgrade "🦄 Unicorn Squadron" (11th upgrade)
+  - Base cost: 5,000 stardust
+  - Cost multiplier: 1.45
+  - Each level adds 1 unicorn and +1.5 DPS per extra unicorn
+- Fixed upgrade loading to merge saved state with new upgrade definitions
+
+**Critical Hit Spawning**
+- Critical hits now have 5% chance to permanently increase unicorn count
+- Implemented in handleAttack function
+- Spawned unicorns persist through prestige
+
+**Visual Features**
+- Multiple unicorns render on screen (up to 5 shown)
+- Staggered positioning with decreasing opacity and scale
+- "🦄 X Unicorns in Squadron" display in stats (when count > 1)
+- "🦄 NEW UNICORN! 🦄" notification animation (2s duration)
+- Added unicornSpawn CSS animation
+
+**Testing**
+- Verified with screenshots showing 3 unicorns in squadron
+- All type checks pass
+- Build succeeds
+- Feature fully functional
+
 ### Implementation Complete ✅
 
 Successfully implemented all three major enhancements:
