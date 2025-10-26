@@ -424,7 +424,7 @@ export default function App() {
               className="relative w-full aspect-[16/7] overflow-hidden rounded-xl border border-indigo-500/50 bg-[radial-gradient(circle_at_top,rgba(99,102,241,.35),rgba(15,23,42,.6))] flex items-center justify-center hover:scale-[1.01] active:scale-[0.99] transition"
               title="Click to fire your horn laser!"
             >
-              <div className="absolute inset-0 starfield">
+              <div className="absolute inset-0 starfield z-20">
                 {/* Render unicorn cards - each with their own image */}
                 {Array.from({ length: Math.min(derived.unicornCount, 5) }).map((_, i) => (
                   <div 
