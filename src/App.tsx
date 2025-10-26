@@ -552,30 +552,34 @@ export default function App() {
   );
 }
 
+const BEAM_COLORS = [
+  { start: '#a5b4fc', mid: '#60a5fa', end: '#ffffff' }, // Blue
+  { start: '#c084fc', mid: '#a855f7', end: '#ffffff' }, // Purple
+  { start: '#fb923c', mid: '#f97316', end: '#ffffff' }, // Orange
+  { start: '#34d399', mid: '#10b981', end: '#ffffff' }, // Green
+  { start: '#fbbf24', mid: '#f59e0b', end: '#ffffff' }, // Yellow
+];
+
 function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolean; unicornIndex?: number; unicornCount?: number }) {
   // Calculate beam origin based on unicorn position
   const startX = 4 + unicornIndex * 12 + 4; // Center of each unicorn card
   const startY = 100 - (6 + (unicornIndex % 2) * 10 + 6); // Bottom position + card height
   
-  // Randomize colors for visual variety
-  const beamColors = [
-    { start: '#a5b4fc', mid: '#60a5fa', end: '#ffffff' }, // Blue
-    { start: '#c084fc', mid: '#a855f7', end: '#ffffff' }, // Purple
-    { start: '#fb923c', mid: '#f97316', end: '#ffffff' }, // Orange
-    { start: '#34d399', mid: '#10b981', end: '#ffffff' }, // Green
-    { start: '#fbbf24', mid: '#f59e0b', end: '#ffffff' }, // Yellow
-  ];
-  const colorScheme = beamColors[unicornIndex % beamColors.length];
+  const colorScheme = BEAM_COLORS[unicornIndex % BEAM_COLORS.length];
+  const beamPath = `M${startX} ${startY} Q ${startX + 30} ${startY - 10} 85 50`;
+  
+  // Use a unique ID based on React's internal rendering to avoid conflicts
+  const uniqueId = `${unicornIndex}-${Date.now()}-${Math.random()}`;
   
   return (
     <svg className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
-        <linearGradient id={`beamGrad-${unicornIndex}`} x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={`beamGrad-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={colorScheme.start} stopOpacity="0.95" />
           <stop offset="70%" stopColor={colorScheme.mid} stopOpacity="1" />
           <stop offset="100%" stopColor={colorScheme.end} stopOpacity="1" />
         </linearGradient>
-        <filter id={`glow-${unicornIndex}`} x="-50%" y="-50%" width="200%" height="200%">
+        <filter id={`glow-${uniqueId}`} x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="2.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
@@ -586,11 +590,11 @@ function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolea
 
       {/* Main beam with glow */}
       <path 
-        d={`M${startX} ${startY} Q ${startX + 30} ${startY - 10} 85 50`} 
-        stroke={`url(#beamGrad-${unicornIndex})`} 
+        d={beamPath} 
+        stroke={`url(#beamGrad-${uniqueId})`} 
         strokeWidth={crit ? 5 : 3.5} 
         fill="none"
-        filter={`url(#glow-${unicornIndex})`} 
+        filter={`url(#glow-${uniqueId})`} 
         style={{ 
           opacity: 0, 
           transformOrigin: `${startX}% ${startY}%`, 
@@ -599,7 +603,7 @@ function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolea
       />
       {/* Inner bright core */}
       <path 
-        d={`M${startX} ${startY} Q ${startX + 30} ${startY - 10} 85 50`} 
+        d={beamPath} 
         stroke="#ffffff" 
         strokeWidth={crit ? 2.5 : 1.8} 
         fill="none"
@@ -616,7 +620,7 @@ function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolea
         fill={colorScheme.mid}
         style={{ 
           opacity: .95, 
-          filter: `url(#glow-${unicornIndex})`, 
+          filter: `url(#glow-${uniqueId})`, 
           animation: `impactFlash ${crit ? 560 : 400}ms ease-out forwards` 
         }} 
       />
