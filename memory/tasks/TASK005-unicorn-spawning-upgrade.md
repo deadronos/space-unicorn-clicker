@@ -1,6 +1,6 @@
 # TASK005 - Add Unicorn Spawning Upgrade
 
-**Status:** In Progress  
+**Status:** Completed  
 **Added:** 2025-10-26  
 **Updated:** 2025-10-26
 
@@ -36,20 +36,20 @@ Design decisions:
 
 ## Progress Tracking
 
-**Overall Status:** In Progress - 10%
+**Overall Status:** Completed - 100%
 
 ### Subtasks
 
 | ID   | Description                                  | Status      | Updated    | Notes |
 |------|----------------------------------------------|-------------|------------|-------|
-| 5.1  | Add unicornCount to GameSnapshot             | Not Started | 2025-10-26 |       |
-| 5.2  | Create Unicorn Squadron upgrade definition   | Not Started | 2025-10-26 |       |
-| 5.3  | Implement DPS scaling per unicorn            | Not Started | 2025-10-26 |       |
-| 5.4  | Add crit-based unicorn spawn chance          | Not Started | 2025-10-26 |       |
-| 5.5  | Update visual rendering for multiple unicorns| Not Started | 2025-10-26 |       |
-| 5.6  | Add visual feedback for unicorn spawn        | Not Started | 2025-10-26 |       |
-| 5.7  | Test implementation                          | Not Started | 2025-10-26 |       |
-| 5.8  | Update documentation                         | Not Started | 2025-10-26 |       |
+| 5.1  | Add unicornCount to GameSnapshot             | Complete    | 2025-10-26 | Added to interface and all initializations |
+| 5.2  | Create Unicorn Squadron upgrade definition   | Complete    | 2025-10-26 | Added as 11th upgrade, costs 5000, mult 1.45 |
+| 5.3  | Implement DPS scaling per unicorn            | Complete    | 2025-10-26 | Each extra unicorn adds +1.5 DPS |
+| 5.4  | Add crit-based unicorn spawn chance          | Complete    | 2025-10-26 | 5% chance on crit to spawn unicorn |
+| 5.5  | Update visual rendering for multiple unicorns| Complete    | 2025-10-26 | Shows up to 5 unicorns with stagger |
+| 5.6  | Add visual feedback for unicorn spawn        | Complete    | 2025-10-26 | "NEW UNICORN!" notification added |
+| 5.7  | Test implementation                          | Complete    | 2025-10-26 | Tested with screenshots |
+| 5.8  | Update documentation                         | Complete    | 2025-10-26 | Task file updated |
 
 ## Progress Log
 
@@ -58,3 +58,20 @@ Design decisions:
 - Created task file
 - Analyzed current game structure
 - Developed implementation plan
+- Implemented all features:
+  - Added unicornCount field to GameSnapshot (initialized to 1)
+  - Created new upgrade "🦄 Unicorn Squadron" (baseCost: 5000, costMult: 1.45)
+  - Each level adds 1 unicorn and +1.5 DPS per extra unicorn
+  - Implemented 5% chance on critical hit to permanently increase unicorn count
+  - Visual rendering shows up to 5 unicorns with staggered positioning and opacity
+  - Added "🦄 X Unicorns in Squadron" display in stats (shows when count > 1)
+  - Added "🦄 NEW UNICORN! 🦄" notification animation (2 second duration)
+  - Fixed upgrade loading to merge saved upgrades with new upgrade definitions
+  - Preserved unicorn count through prestige
+- Tested implementation with screenshots showing:
+  - 3 unicorns visible on screen
+  - Unicorn count displayed in UI
+  - Upgrade working correctly
+- All type checks pass
+- Build succeeds
+- Feature complete and working
