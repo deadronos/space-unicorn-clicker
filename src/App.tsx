@@ -120,7 +120,7 @@ function deriveStats(base: GameSnapshot): GameSnapshot {
 }
 
 export default function App() {
-  const [beams, setBeams] = useState<{ id: number; start: number; duration: number; crit?: boolean }[]>([]);
+  const [beams, setBeams] = useState<{ id: number; start: number; duration: number; crit?: boolean; unicornIndex?: number }[]>([]);
   const [sparks, setSparks] = useState<{ id: number; start: number; duration: number }[]>([]);
   const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }[]>([]);
   const [explosions, setExplosions] = useState<{ id: number; start: number }[]>([]);
@@ -222,8 +222,12 @@ export default function App() {
       const intervalMs = Math.max(120, 800 / Math.max(1, derived.dps));
       if (derived.dps > 0 && now - lastAutoBeam.current > intervalMs) {
         lastAutoBeam.current = now;
-        setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: 420 }]);
-        setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: 420 }]);
+        // Spawn beams from all unicorns in the squadron
+        const unicornCount = Math.min(derived.unicornCount, 5);
+        for (let i = 0; i < unicornCount; i++) {
+          setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: 600, unicornIndex: i }]);
+        }
+        setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: 600 }]);
       }
     }, 50);
     return () => clearInterval(interval);
@@ -231,10 +235,10 @@ export default function App() {
 
   useEffect(() => { const id = setInterval(() => saveState(game), 2000); return () => clearInterval(id); }, [game]);
 
-  function spawnBeam(crit = false) {
+  function spawnBeam(crit = false, unicornIndex = 0) {
     const now = Date.now();
-    setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: crit ? 560 : 400, crit }]);
-    setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: crit ? 560 : 400 }]);
+    setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: crit ? 700 : 600, crit, unicornIndex }]);
+    setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: crit ? 700 : 600 }]);
   }
 
   function handleAttack(e: React.MouseEvent) {
@@ -338,12 +342,12 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-slate-900 to-black text-slate-100 p-4">
       <style>{`
         @keyframes beamFade {
-          0% { opacity: 0; transform: translateY(0) scaleX(0.2) skewY(-1deg); filter: saturate(120%); }
-          12% { opacity: 1; transform: translateY(0) scaleX(1) skewY(0); }
-          45% { filter: saturate(160%); }
-          100% { opacity: 0; transform: translateY(0) scaleX(1.2); filter: saturate(110%); }
+          0% { opacity: 0; transform: scaleX(0.3); filter: saturate(150%); }
+          15% { opacity: 1; transform: scaleX(1); }
+          50% { opacity: 1; filter: saturate(180%); }
+          100% { opacity: 0; transform: scaleX(1.1); filter: saturate(120%); }
         }
-        @keyframes impactFlash { 0% { opacity: .95; } 100% { opacity: 0; } }
+        @keyframes impactFlash { 0% { opacity: 1; } 50% { opacity: 1; } 100% { opacity: 0; } }
         @keyframes shake {
           0% { transform: translate(0,0) rotate(0); }
           20% { transform: translate(1px,-1px) rotate(-.15deg); }
@@ -421,26 +425,36 @@ export default function App() {
               title="Click to fire your horn laser!"
             >
               <div className="absolute inset-0 starfield">
-                <img src={UNICORN_IMG} alt="Space Unicorn" className="absolute left-2 bottom-2 h-40 w-auto object-contain select-none drop-shadow-[0_0_12px_rgba(99,102,241,.6)]"
-                  onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none';}} />
+                {/* Render unicorn cards - each with their own image */}
                 {Array.from({ length: Math.min(derived.unicornCount, 5) }).map((_, i) => (
                   <div 
                     key={i}
-                    className="absolute text-5xl select-none" 
+                    className="absolute bg-slate-800/40 rounded-lg p-2 border border-indigo-400/50 backdrop-blur-sm" 
                     style={{ 
-                      left: `${4 + i * 8}%`, 
-                      bottom: `${6 + (i % 2) * 8}%`,
-                      opacity: 0.9 - i * 0.1,
-                      transform: `scale(${1 - i * 0.1})`
+                      left: `${4 + i * 12}%`, 
+                      bottom: `${6 + (i % 2) * 10}%`,
+                      width: '80px',
+                      height: '100px',
+                      opacity: 0.9 - i * 0.08,
+                      transform: `scale(${1 - i * 0.08})`,
+                      boxShadow: '0 0 12px rgba(99,102,241,0.4)'
                     }}
                   >
-                    🦄
+                    <img 
+                      src={UNICORN_IMG} 
+                      alt={`Unicorn ${i + 1}`} 
+                      className="w-full h-full object-cover rounded select-none"
+                      onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none';}} 
+                    />
+                    <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {i + 1}
+                    </div>
                   </div>
                 ))}
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
                   <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
-                {beams.map((b) => (<BeamVisual key={b.id} crit={!!b.crit} />))}
+                {beams.map((b) => (<BeamVisual key={b.id} crit={!!b.crit} unicornIndex={b.unicornIndex ?? 0} unicornCount={Math.min(derived.unicornCount, 5)} />))}
                 {sparks.map((s) => (<ImpactSparks key={s.id} duration={s.duration} />))}
                 {damageNumbers.map((dn) => (
                   <div key={dn.id} className="absolute pointer-events-none font-bold text-2xl" 
@@ -538,27 +552,98 @@ export default function App() {
   );
 }
 
-function BeamVisual({ crit }: { crit: boolean }) {
+const BEAM_COLORS = [
+  { start: '#a5b4fc', mid: '#60a5fa', end: '#ffffff' }, // Blue
+  { start: '#c084fc', mid: '#a855f7', end: '#ffffff' }, // Purple
+  { start: '#fb923c', mid: '#f97316', end: '#ffffff' }, // Orange
+  { start: '#34d399', mid: '#10b981', end: '#ffffff' }, // Green
+  { start: '#fbbf24', mid: '#f59e0b', end: '#ffffff' }, // Yellow
+];
+
+function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolean; unicornIndex?: number; unicornCount?: number }) {
+  // Calculate beam origin based on unicorn position
+  const startX = 4 + unicornIndex * 12 + 4; // Center of each unicorn card
+  const startY = 100 - (6 + (unicornIndex % 2) * 10 + 6); // Bottom position + card height
+  
+  const colorScheme = BEAM_COLORS[unicornIndex % BEAM_COLORS.length];
+  // Much straighter beam path - closer to the reference image
+  const beamPath = `M${startX} ${startY} L 85 50`;
+  
+  // Use a unique ID based on React's internal rendering to avoid conflicts
+  const uniqueId = `${unicornIndex}-${Date.now()}-${Math.random()}`;
+  
   return (
     <svg className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
-        <linearGradient id="beamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95" />
-          <stop offset="70%" stopColor="#60a5fa" stopOpacity="1" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
+        <linearGradient id={`beamGrad-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={colorScheme.start} stopOpacity="1" />
+          <stop offset="50%" stopColor={colorScheme.mid} stopOpacity="1" />
+          <stop offset="100%" stopColor={colorScheme.end} stopOpacity="1" />
         </linearGradient>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="1.8" result="blur" />
+        <filter id={`glow-${uniqueId}`} x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
+            <feMergeNode in="blur" />
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
 
-      <path d="M10 78 Q 40 65 85 50" stroke="url(#beamGrad)" strokeWidth={crit ? 4.2 : 2.8} filter="url(#glow)" style={{ opacity: 0, transformOrigin: "10% 78%", animation: `beamFade ${crit ? 560 : 400}ms cubic-bezier(.2,.6,.2,1) forwards` }} />
-      <path d="M10 78 Q 40 65 85 50" stroke="#eef2ff" strokeWidth={crit ? 2.2 : 1.4} style={{ opacity: 0, animation: `beamFade ${crit ? 560 : 400}ms ease-out forwards` }} />
-      <circle cx="10" cy="78" r={crit ? 2.5 : 1.8} fill="#fff" style={{ opacity: .9, filter: "url(#glow)", animation: `impactFlash ${crit ? 560 : 400}ms ease-out forwards` }} />
+      {/* Outer glow layer for maximum visibility */}
+      <line 
+        x1={startX} 
+        y1={startY} 
+        x2="85" 
+        y2="50" 
+        stroke={colorScheme.mid} 
+        strokeWidth={crit ? 12 : 10} 
+        strokeOpacity="0.4"
+        filter={`url(#glow-${uniqueId})`}
+        style={{ 
+          opacity: 0, 
+          animation: `beamFade ${crit ? 700 : 600}ms cubic-bezier(.1,.5,.1,1) forwards` 
+        }} 
+      />
+      {/* Main beam with gradient */}
+      <line 
+        x1={startX} 
+        y1={startY} 
+        x2="85" 
+        y2="50" 
+        stroke={`url(#beamGrad-${uniqueId})`} 
+        strokeWidth={crit ? 6 : 5} 
+        filter={`url(#glow-${uniqueId})`} 
+        style={{ 
+          opacity: 0, 
+          animation: `beamFade ${crit ? 700 : 600}ms cubic-bezier(.1,.5,.1,1) forwards` 
+        }} 
+      />
+      {/* Inner bright core */}
+      <line 
+        x1={startX} 
+        y1={startY} 
+        x2="85" 
+        y2="50" 
+        stroke="#ffffff" 
+        strokeWidth={crit ? 3 : 2.5} 
+        style={{ 
+          opacity: 0, 
+          animation: `beamFade ${crit ? 700 : 600}ms ease-out forwards` 
+        }} 
+      />
+      {/* Origin glow */}
+      <circle 
+        cx={startX} 
+        cy={startY} 
+        r={crit ? 4 : 3} 
+        fill={colorScheme.start}
+        filter={`url(#glow-${uniqueId})`}
+        style={{ 
+          opacity: .95, 
+          animation: `impactFlash ${crit ? 700 : 600}ms ease-out forwards` 
+        }} 
+      />
     </svg>
   );
 }
