@@ -11,6 +11,7 @@ interface Ship {
   maxHp: number;
   reward: Currency;
   isBoss: boolean;
+  variant: 'standard' | 'armored' | 'speed';
 }
 
 interface UpgradeDef {
@@ -36,6 +37,10 @@ interface GameSnapshot {
   upgrades: Record<string, UpgradeState>;
   autoBuy: boolean;
   lastTick: number;
+  prestigeGems: number;
+  totalPrestiges: number;
+  comboCount: number;
+  comboExpiry: number;
 }
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(n, max));
@@ -48,30 +53,57 @@ const fmt = (n: number) =>
 
 function shipForLevel(level: number): Ship {
   const isBoss = level % 10 === 0;
+  const isArmored = !isBoss && level % 5 === 0;
+  const isSpeed = !isBoss && !isArmored && level % 3 === 0;
+  const variant = isBoss ? 'standard' : isArmored ? 'armored' : isSpeed ? 'speed' : 'standard';
+  
   const base = 30;
-  const hp = Math.floor(base * Math.pow(1.18, level) * (isBoss ? 8 : 1));
-  const reward = Math.floor(10 * Math.pow(1.16, level) * (isBoss ? 5 : 1));
-  return { level, maxHp: hp, hp, reward, isBoss };
+  let hpMult = 1;
+  if (isBoss) hpMult = 8;
+  else if (isArmored) hpMult = 1.5;
+  else if (isSpeed) hpMult = 0.7;
+  
+  const hp = Math.floor(base * Math.pow(1.18, level) * hpMult);
+  const reward = Math.floor(10 * Math.pow(1.16, level) * (isBoss ? 5 : isArmored ? 1.3 : isSpeed ? 0.9 : 1));
+  return { level, maxHp: hp, hp, reward, isBoss, variant };
 }
 
-const STORAGE_KEY = "space-unicorn-clicker-v1";
+const STORAGE_KEY = "space-unicorn-clicker-v2";
 
 function loadState(): GameSnapshot | null {
   try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return null; return JSON.parse(raw) as GameSnapshot; } catch { return null; }
 }
 function saveState(s: GameSnapshot) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {} }
 
+function calculatePrestigeGems(totalEarned: number): number {
+  return Math.floor(Math.sqrt(totalEarned / 1000000));
+}
+
+function getGemMultiplier(gems: number): number {
+  return 1 + (gems * 0.02);
+}
+
 const UPGRADE_DEFS: UpgradeDef[] = [
-  { id: "horn", name: "Horn Laser", desc: "+1 click damage (scales)", baseCost: 10, costMult: 1.15,
+  { id: "horn", name: "🔥 Horn Laser", desc: "+1 click damage (scales)", baseCost: 10, costMult: 1.15,
     apply: (g) => { const lvl = g.upgrades.horn?.level ?? 0; g.clickDamage = 1 + lvl * 1; } },
-  { id: "autofire", name: "Auto-Fire", desc: "+1 DPS per level", baseCost: 25, costMult: 1.15,
+  { id: "autofire", name: "⚡ Auto-Fire", desc: "+1 DPS per level", baseCost: 25, costMult: 1.15,
     apply: (g) => { const lvl = g.upgrades.autofire?.level ?? 0; g.dps += lvl * 1; } },
-  { id: "mane", name: "Plasma Mane", desc: "+10% loot per level", baseCost: 50, costMult: 1.18,
+  { id: "mane", name: "✨ Plasma Mane", desc: "+10% loot per level", baseCost: 50, costMult: 1.18,
     apply: (g) => { const lvl = g.upgrades.mane?.level ?? 0; g.lootMultiplier *= 1 + 0.1 * lvl; } },
-  { id: "core", name: "Star Core", desc: "+0.5 DPS and +0.5 click per level", baseCost: 100, costMult: 1.2,
+  { id: "core", name: "⭐ Star Core", desc: "+0.5 DPS and +0.5 click per level", baseCost: 100, costMult: 1.2,
     apply: (g) => { const lvl = g.upgrades.core?.level ?? 0; g.dps += 0.5 * lvl; g.clickDamage += 0.5 * lvl; } },
-  { id: "crit", name: "Quasar Focus", desc: "+1% crit chance per level (3x)", baseCost: 150, costMult: 1.22,
+  { id: "crit", name: "💫 Quasar Focus", desc: "+1% crit chance per level (3x)", baseCost: 150, costMult: 1.22,
     apply: (g) => { const lvl = g.upgrades.crit?.level ?? 0; g.critChance += 0.01 * lvl; } },
+  { id: "burst", name: "💥 Burst Fire", desc: "+0.3 click damage per level", baseCost: 250, costMult: 1.25,
+    apply: (g) => { const lvl = g.upgrades.burst?.level ?? 0; g.clickDamage += 0.3 * lvl; } },
+  { id: "turret", name: "🎯 Auto-Turrets", desc: "+0.8 DPS per level", baseCost: 500, costMult: 1.28,
+    apply: (g) => { const lvl = g.upgrades.turret?.level ?? 0; g.dps += 0.8 * lvl; } },
+  { id: "chain", name: "⚡ Chain Lightning", desc: "+0.2% crit chance, +0.1 crit mult", baseCost: 800, costMult: 1.3,
+    apply: (g) => { const lvl = g.upgrades.chain?.level ?? 0; g.critChance += 0.002 * lvl; g.critMult += 0.1 * lvl; } },
+  { id: "momentum", name: "🚀 Momentum", desc: "+5% click and DPS per level", baseCost: 1500, costMult: 1.35,
+    apply: (g) => { const lvl = g.upgrades.momentum?.level ?? 0; g.clickDamage *= 1 + 0.05 * lvl; g.dps *= 1 + 0.05 * lvl; } },
+  { id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
+    apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; } },
 ];
 
 function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
@@ -80,15 +112,21 @@ function deriveStats(base: GameSnapshot): GameSnapshot {
   const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3 };
   for (const def of UPGRADE_DEFS) def.apply(g);
   g.critChance = clamp(g.critChance, 0, 0.8);
+  g.lootMultiplier *= getGemMultiplier(g.prestigeGems);
   return g;
 }
 
 export default function App() {
   const [beams, setBeams] = useState<{ id: number; start: number; duration: number; crit?: boolean }[]>([]);
   const [sparks, setSparks] = useState<{ id: number; start: number; duration: number }[]>([]);
+  const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }[]>([]);
+  const [explosions, setExplosions] = useState<{ id: number; start: number }[]>([]);
   const beamId = useRef(0);
   const sparkId = useRef(0);
+  const damageId = useRef(0);
+  const explosionId = useRef(0);
   const lastAutoBeam = useRef<number>(Date.now());
+  const lastClickTime = useRef<number>(0);
 
   const [game, setGame] = useState<GameSnapshot>(() => {
     const saved = loadState();
@@ -110,11 +148,12 @@ export default function App() {
           stardust += reward; totalEarned += reward; ship = shipForLevel(ship.level + 1);
         }
       }
-      return { ...saved, stardust, totalEarned, ship, lastTick: now };
+      return { ...saved, stardust, totalEarned, ship, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0 };
     }
     return {
       stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
       ship: shipForLevel(1), upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), autoBuy: true, lastTick: Date.now(),
+      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0,
     };
   });
 
@@ -125,6 +164,14 @@ export default function App() {
       const now = Date.now();
       setBeams((bs) => bs.filter((b) => now - b.start < b.duration));
       setSparks((ss) => ss.filter((s) => now - s.start < s.duration));
+      setDamageNumbers((dns) => dns.filter((dn) => now - dn.start < 1000));
+      setExplosions((exs) => exs.filter((ex) => now - ex.start < 800));
+      setGame((prev) => {
+        if (prev.comboExpiry > 0 && now > prev.comboExpiry) {
+          return { ...prev, comboCount: 0, comboExpiry: 0 };
+        }
+        return prev;
+      });
     }, 100);
     return () => clearInterval(id);
   }, []);
@@ -183,21 +230,49 @@ export default function App() {
 
   function handleAttack(e: React.MouseEvent) {
     e.preventDefault();
+    const now = Date.now();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
     setGame((prev) => {
       const g = { ...prev };
+      const timeSinceLastClick = now - lastClickTime.current;
+      
+      if (timeSinceLastClick < 2000 && g.comboCount > 0) {
+        g.comboCount += 1;
+        g.comboExpiry = now + 2000;
+      } else if (timeSinceLastClick < 2000) {
+        g.comboCount = 2;
+        g.comboExpiry = now + 2000;
+      } else {
+        g.comboCount = 0;
+        g.comboExpiry = 0;
+      }
+      
       const isCrit = Math.random() < derived.critChance;
       const dmg = isCrit ? derived.clickDamage * derived.critMult : derived.clickDamage;
       let ship = { ...g.ship };
+      const shipDestroyed = ship.hp <= dmg;
       ship.hp -= dmg;
       let stardust = g.stardust;
       let totalEarned = g.totalEarned;
       if (ship.hp <= 0) {
         const reward = Math.floor(ship.reward * derived.lootMultiplier);
-        stardust += reward; totalEarned += reward; ship = shipForLevel(ship.level + 1);
+        stardust += reward; totalEarned += reward; 
+        ship = shipForLevel(ship.level + 1);
       }
       g.ship = ship; g.stardust = stardust; g.totalEarned = totalEarned;
+      
+      setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: dmg, x, y, start: now, crit: isCrit }]);
+      if (shipDestroyed) {
+        setExplosions((exs) => [...exs, { id: ++explosionId.current, start: now }]);
+      }
+      
       return g;
     });
+    
+    lastClickTime.current = now;
     spawnBeam(false);
   }
 
@@ -214,8 +289,32 @@ export default function App() {
   function resetProgress() {
     if (!confirm("Reset all progress?")) return;
     const fresh = { stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
-      ship: shipForLevel(1), upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), autoBuy: true, lastTick: Date.now() } as GameSnapshot;
+      ship: shipForLevel(1), upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), autoBuy: true, lastTick: Date.now(),
+      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0 } as GameSnapshot;
     setGame(fresh); saveState(fresh);
+  }
+
+  function performPrestige() {
+    const gemsToAward = calculatePrestigeGems(game.totalEarned);
+    if (gemsToAward === 0 || game.totalEarned < 1000000) {
+      alert("You need at least 1,000,000 total Stardust earned to prestige!");
+      return;
+    }
+    if (!confirm(`Prestige and reset progress to gain ${gemsToAward} Cosmic Gem${gemsToAward > 1 ? 's' : ''}? This will reset your ship, upgrades, and stardust, but keep your gems for a permanent ${(gemsToAward * 2)}% earnings bonus!`)) return;
+    
+    const prestiged = {
+      stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
+      ship: shipForLevel(1), 
+      upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), 
+      autoBuy: true, 
+      lastTick: Date.now(),
+      prestigeGems: game.prestigeGems + gemsToAward,
+      totalPrestiges: game.totalPrestiges + 1,
+      comboCount: 0,
+      comboExpiry: 0
+    } as GameSnapshot;
+    setGame(prestiged); 
+    saveState(prestiged);
   }
 
   const shipPct = (derived.ship.hp / derived.ship.maxHp) * 100;
@@ -245,24 +344,47 @@ export default function App() {
         .starfield::after  { background-image: radial-gradient(#93c5fd 1px, transparent 1px); animation: drift2 120s linear infinite; opacity:.25; }
         @keyframes drift1 { from { background-position:0 0; } to { background-position:512px 512px; } }
         @keyframes drift2 { from { background-position:0 0; } to { background-position:-512px -512px; } }
+        @keyframes damageFloat {
+          0% { transform: translateY(0) scale(0.8); opacity: 0; }
+          20% { opacity: 1; transform: translateY(-10px) scale(1.2); }
+          100% { transform: translateY(-50px) scale(1); opacity: 0; }
+        }
+        @keyframes explosion {
+          0% { transform: scale(0.5); opacity: 1; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        @keyframes comboPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
       `}</style>
       <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-3 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight">🦄 Space Unicorn Clicker</h1>
             <p className="text-slate-300">Raid ironclad battleships with your cosmic horn. Earn Stardust. Auto-upgrade. Profit.</p>
+            {game.prestigeGems > 0 && (
+              <div className="text-yellow-400 text-sm mt-1">💎 {game.prestigeGems} Cosmic Gem{game.prestigeGems > 1 ? 's' : ''} (+{Math.round((getGemMultiplier(game.prestigeGems) - 1) * 100)}% earnings)</div>
+            )}
           </div>
           <div className="text-right">
             <div className="text-lg">Stardust: <span className="font-bold">{fmt(derived.stardust)}</span></div>
-            <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance>0?`• Crit ${Math.round(derived.critChance*100)}% x${derived.critMult}`:""}</div>
+            <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance>0?`• Crit ${Math.round(derived.critChance*100)}% x${derived.critMult.toFixed(1)}`:""}</div>
             <div className="text-sm text-slate-400">Total Earned: {fmt(derived.totalEarned)}</div>
+            {game.comboCount >= 3 && (
+              <div className="text-amber-400 font-bold text-lg mt-1" style={{ animation: 'comboPulse 0.5s ease-in-out infinite' }}>
+                🔥 {game.comboCount}x COMBO!
+              </div>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-2">
           <div className="bg-slate-800/60 rounded-2xl p-4 shadow-xl border border-slate-700">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xl font-semibold">{derived.ship.isBoss ? "BOSS" : "Enemy"} Battleship — L{derived.ship.level}</div>
+              <div className="text-xl font-semibold">
+                {derived.ship.isBoss ? "⚔️ BOSS" : derived.ship.variant === 'armored' ? "🛡️ ARMORED" : derived.ship.variant === 'speed' ? "⚡ SPEED" : "Enemy"} Battleship — L{derived.ship.level}
+              </div>
               <div className="text-sm text-slate-300">HP {fmt(Math.max(0, Math.ceil(derived.ship.hp)))} / {fmt(derived.ship.maxHp)} • Reward {fmt(Math.floor(derived.ship.reward * derived.lootMultiplier))}</div>
             </div>
             <div className="h-3 w-full bg-slate-700 rounded-full overflow-hidden mb-4">
@@ -279,10 +401,28 @@ export default function App() {
                   onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none';}} />
                 <div className="absolute left-4 bottom-6 text-5xl select-none">🦄</div>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
-                  <BattleshipVisual shake={beams.length>0} />
+                  <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
                 {beams.map((b) => (<BeamVisual key={b.id} crit={!!b.crit} />))}
                 {sparks.map((s) => (<ImpactSparks key={s.id} duration={s.duration} />))}
+                {damageNumbers.map((dn) => (
+                  <div key={dn.id} className="absolute pointer-events-none font-bold text-2xl" 
+                    style={{ 
+                      left: `${dn.x}%`, 
+                      top: `${dn.y}%`, 
+                      color: dn.crit ? '#fbbf24' : '#60a5fa',
+                      textShadow: '0 0 8px rgba(0,0,0,0.8)',
+                      animation: 'damageFloat 1s ease-out forwards'
+                    }}>
+                    {dn.crit ? 'CRIT! ' : ''}{fmt(dn.value)}
+                  </div>
+                ))}
+                {explosions.map((ex) => (
+                  <div key={ex.id} className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24 pointer-events-none">
+                    <div className="w-full h-full rounded-full bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 opacity-80" 
+                      style={{ animation: 'explosion 0.8s ease-out forwards' }} />
+                  </div>
+                ))}
               </div>
 
               <div className="text-center relative z-10">
@@ -325,9 +465,19 @@ export default function App() {
                 );
               })}
             </div>
-            <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
-              <button className="underline" onClick={resetProgress}>Reset Progress</button>
-              <div>Loot Mult: x{derived.lootMultiplier.toFixed(2)}</div>
+            <div className="mt-4 space-y-2">
+              {game.totalEarned >= 1000000 && (
+                <button 
+                  onClick={performPrestige} 
+                  className="w-full px-4 py-2 rounded-lg font-bold text-sm bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 border-2 border-yellow-400 hover:from-yellow-400 hover:to-amber-500 transition"
+                >
+                  💎 PRESTIGE ({calculatePrestigeGems(game.totalEarned)} Gems)
+                </button>
+              )}
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <button className="underline" onClick={resetProgress}>Reset Progress</button>
+                <div>Loot Mult: x{derived.lootMultiplier.toFixed(2)}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -377,24 +527,40 @@ function ImpactSparks({ duration }: { duration: number }) {
   );
 }
 
-function BattleshipVisual({ shake }: { shake: boolean }) {
+function BattleshipVisual({ shake, variant, isBoss }: { shake: boolean; variant: 'standard' | 'armored' | 'speed'; isBoss: boolean }) {
+  const hullColor = isBoss ? '#dc2626' : variant === 'armored' ? '#1e293b' : variant === 'speed' ? '#334155' : '#0b1220';
+  const hullColor2 = isBoss ? '#991b1b' : variant === 'armored' ? '#0f172a' : variant === 'speed' ? '#1e293b' : '#334155';
+  const accentColor = isBoss ? '#fbbf24' : variant === 'armored' ? '#475569' : variant === 'speed' ? '#60a5fa' : '#64748b';
+  
   return (
     <svg className={`w-full h-full ${shake ? 'animate-[shake_220ms_ease-out]' : ''}`} viewBox="0 0 160 80">
       <defs>
-        <linearGradient id="hull" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#0b1220" />
-          <stop offset="100%" stopColor="#334155" />
+        <linearGradient id={`hull-${variant}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={hullColor} />
+          <stop offset="100%" stopColor={hullColor2} />
         </linearGradient>
-        <radialGradient id="engine" cx="0.1" cy="0.5" r="0.8">
-          <stop offset="0%" stopColor="#93c5fd" stopOpacity="1" />
-          <stop offset="100%" stopColor="#93c5fd" stopOpacity="0" />
+        <radialGradient id={`engine-${variant}`} cx="0.1" cy="0.5" r="0.8">
+          <stop offset="0%" stopColor={variant === 'speed' ? '#60a5fa' : '#93c5fd'} stopOpacity="1" />
+          <stop offset="100%" stopColor={variant === 'speed' ? '#60a5fa' : '#93c5fd'} stopOpacity="0" />
         </radialGradient>
       </defs>
-      <path d="M10 50 L70 30 L150 40 L100 60 L20 60 Z" fill="url(#hull)" stroke="#64748b" strokeWidth="1.5" />
-      <rect x="70" y="24" width="16" height="10" rx="2" fill="#1f2937" stroke="#94a3b8" />
-      {new Array(5).fill(0).map((_,i)=> (<rect key={i} x={78 + i*8} y={44} width="3" height="2" fill="#cbd5e1" opacity={0.8 - i*0.1} />))}
-      <circle cx="18" cy="55" r="10" fill="url(#engine)" />
-      <circle cx="18" cy="55" r="2.5" fill="#e2e8f0" />
+      <path d="M10 50 L70 30 L150 40 L100 60 L20 60 Z" fill={`url(#hull-${variant})`} stroke={accentColor} strokeWidth={isBoss ? "2.5" : "1.5"} />
+      {variant === 'armored' && (
+        <>
+          <rect x="60" y="35" width="30" height="20" rx="3" fill="#1e293b" stroke="#475569" strokeWidth="1.5" opacity="0.8" />
+          <rect x="90" y="38" width="25" height="15" rx="2" fill="#1e293b" stroke="#475569" strokeWidth="1.5" opacity="0.8" />
+        </>
+      )}
+      <rect x="70" y="24" width={variant === 'speed' ? "12" : "16"} height="10" rx="2" fill="#1f2937" stroke="#94a3b8" />
+      {new Array(variant === 'speed' ? 3 : 5).fill(0).map((_,i)=> (<rect key={i} x={78 + i*8} y={44} width="3" height="2" fill="#cbd5e1" opacity={0.8 - i*0.1} />))}
+      <circle cx="18" cy="55" r={variant === 'speed' ? "12" : "10"} fill={`url(#engine-${variant})`} />
+      <circle cx="18" cy="55" r={variant === 'speed' ? "3" : "2.5"} fill="#e2e8f0" />
+      {isBoss && (
+        <>
+          <rect x="75" y="18" width="8" height="6" fill="#fbbf24" opacity="0.8" />
+          <rect x="88" y="18" width="8" height="6" fill="#fbbf24" opacity="0.8" />
+        </>
+      )}
       <line x1="86" y1="24" x2="90" y2="16" stroke="#94a3b8" strokeWidth="1" />
       <line x1="90" y1="24" x2="95" y2="18" stroke="#94a3b8" strokeWidth="1" />
     </svg>
