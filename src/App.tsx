@@ -225,9 +225,9 @@ export default function App() {
         // Spawn beams from all unicorns in the squadron
         const unicornCount = Math.min(derived.unicornCount, 5);
         for (let i = 0; i < unicornCount; i++) {
-          setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: 420, unicornIndex: i }]);
+          setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: 600, unicornIndex: i }]);
         }
-        setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: 420 }]);
+        setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: 600 }]);
       }
     }, 50);
     return () => clearInterval(interval);
@@ -237,8 +237,8 @@ export default function App() {
 
   function spawnBeam(crit = false, unicornIndex = 0) {
     const now = Date.now();
-    setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: crit ? 560 : 400, crit, unicornIndex }]);
-    setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: crit ? 560 : 400 }]);
+    setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: crit ? 700 : 600, crit, unicornIndex }]);
+    setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: crit ? 700 : 600 }]);
   }
 
   function handleAttack(e: React.MouseEvent) {
@@ -342,12 +342,12 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-slate-900 to-black text-slate-100 p-4">
       <style>{`
         @keyframes beamFade {
-          0% { opacity: 0; transform: translateY(0) scaleX(0.2) skewY(-1deg); filter: saturate(120%); }
-          12% { opacity: 1; transform: translateY(0) scaleX(1) skewY(0); }
-          45% { filter: saturate(160%); }
-          100% { opacity: 0; transform: translateY(0) scaleX(1.2); filter: saturate(110%); }
+          0% { opacity: 0; transform: scaleX(0.3); filter: saturate(150%); }
+          15% { opacity: 1; transform: scaleX(1); }
+          50% { opacity: 1; filter: saturate(180%); }
+          100% { opacity: 0; transform: scaleX(1.1); filter: saturate(120%); }
         }
-        @keyframes impactFlash { 0% { opacity: .95; } 100% { opacity: 0; } }
+        @keyframes impactFlash { 0% { opacity: 1; } 50% { opacity: 1; } 100% { opacity: 0; } }
         @keyframes shake {
           0% { transform: translate(0,0) rotate(0); }
           20% { transform: translate(1px,-1px) rotate(-.15deg); }
@@ -566,7 +566,8 @@ function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolea
   const startY = 100 - (6 + (unicornIndex % 2) * 10 + 6); // Bottom position + card height
   
   const colorScheme = BEAM_COLORS[unicornIndex % BEAM_COLORS.length];
-  const beamPath = `M${startX} ${startY} Q ${startX + 30} ${startY - 10} 85 50`;
+  // Much straighter beam path - closer to the reference image
+  const beamPath = `M${startX} ${startY} L 85 50`;
   
   // Use a unique ID based on React's internal rendering to avoid conflicts
   const uniqueId = `${unicornIndex}-${Date.now()}-${Math.random()}`;
@@ -575,53 +576,72 @@ function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolea
     <svg className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
         <linearGradient id={`beamGrad-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={colorScheme.start} stopOpacity="0.95" />
-          <stop offset="70%" stopColor={colorScheme.mid} stopOpacity="1" />
+          <stop offset="0%" stopColor={colorScheme.start} stopOpacity="1" />
+          <stop offset="50%" stopColor={colorScheme.mid} stopOpacity="1" />
           <stop offset="100%" stopColor={colorScheme.end} stopOpacity="1" />
         </linearGradient>
-        <filter id={`glow-${uniqueId}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
+        <filter id={`glow-${uniqueId}`} x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
+            <feMergeNode in="blur" />
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
 
-      {/* Main beam with glow */}
-      <path 
-        d={beamPath} 
+      {/* Outer glow layer for maximum visibility */}
+      <line 
+        x1={startX} 
+        y1={startY} 
+        x2="85" 
+        y2="50" 
+        stroke={colorScheme.mid} 
+        strokeWidth={crit ? 12 : 10} 
+        strokeOpacity="0.4"
+        filter={`url(#glow-${uniqueId})`}
+        style={{ 
+          opacity: 0, 
+          animation: `beamFade ${crit ? 700 : 600}ms cubic-bezier(.1,.5,.1,1) forwards` 
+        }} 
+      />
+      {/* Main beam with gradient */}
+      <line 
+        x1={startX} 
+        y1={startY} 
+        x2="85" 
+        y2="50" 
         stroke={`url(#beamGrad-${uniqueId})`} 
-        strokeWidth={crit ? 5 : 3.5} 
-        fill="none"
+        strokeWidth={crit ? 6 : 5} 
         filter={`url(#glow-${uniqueId})`} 
         style={{ 
           opacity: 0, 
-          transformOrigin: `${startX}% ${startY}%`, 
-          animation: `beamFade ${crit ? 560 : 400}ms cubic-bezier(.2,.6,.2,1) forwards` 
+          animation: `beamFade ${crit ? 700 : 600}ms cubic-bezier(.1,.5,.1,1) forwards` 
         }} 
       />
       {/* Inner bright core */}
-      <path 
-        d={beamPath} 
+      <line 
+        x1={startX} 
+        y1={startY} 
+        x2="85" 
+        y2="50" 
         stroke="#ffffff" 
-        strokeWidth={crit ? 2.5 : 1.8} 
-        fill="none"
+        strokeWidth={crit ? 3 : 2.5} 
         style={{ 
           opacity: 0, 
-          animation: `beamFade ${crit ? 560 : 400}ms ease-out forwards` 
+          animation: `beamFade ${crit ? 700 : 600}ms ease-out forwards` 
         }} 
       />
       {/* Origin glow */}
       <circle 
         cx={startX} 
         cy={startY} 
-        r={crit ? 3 : 2.2} 
-        fill={colorScheme.mid}
+        r={crit ? 4 : 3} 
+        fill={colorScheme.start}
+        filter={`url(#glow-${uniqueId})`}
         style={{ 
           opacity: .95, 
-          filter: `url(#glow-${uniqueId})`, 
-          animation: `impactFlash ${crit ? 560 : 400}ms ease-out forwards` 
+          animation: `impactFlash ${crit ? 700 : 600}ms ease-out forwards` 
         }} 
       />
     </svg>
