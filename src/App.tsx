@@ -111,12 +111,61 @@ const UPGRADE_DEFS: UpgradeDef[] = [
 
 function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
+function createEmptyUpgrades(): Record<string, UpgradeState> {
+  return Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
+}
+
 function deriveStats(base: GameSnapshot): GameSnapshot {
   const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, unicornCount: 1 };
   for (const def of UPGRADE_DEFS) def.apply(g);
   g.critChance = clamp(g.critChance, 0, 0.8);
   g.lootMultiplier *= getGemMultiplier(g.prestigeGems);
   return g;
+}
+
+function applyDamageToShip(
+  ship: Ship,
+  damage: number,
+  lootMultiplier: number
+): { ship: Ship; rewardEarned: number } {
+  let currentShip = { ...ship };
+  let totalReward = 0;
+  let remaining = damage;
+  
+  while (remaining > 0) {
+    const dealt = Math.min(currentShip.hp, remaining);
+    currentShip.hp -= dealt;
+    remaining -= dealt;
+    
+    if (currentShip.hp <= 0) {
+      const reward = Math.floor(currentShip.reward * lootMultiplier);
+      totalReward += reward;
+      currentShip = shipForLevel(currentShip.level + 1);
+    }
+  }
+  
+  return { ship: currentShip, rewardEarned: totalReward };
+}
+
+function createFreshGameState(): GameSnapshot {
+  return {
+    stardust: 0,
+    totalEarned: 0,
+    clickDamage: 1,
+    dps: 0,
+    lootMultiplier: 1,
+    critChance: 0.02,
+    critMult: 3,
+    ship: shipForLevel(1),
+    upgrades: createEmptyUpgrades(),
+    autoBuy: true,
+    lastTick: Date.now(),
+    prestigeGems: 0,
+    totalPrestiges: 0,
+    comboCount: 0,
+    comboExpiry: 0,
+    unicornCount: 1,
+  };
 }
 
 export default function App() {
@@ -137,32 +186,18 @@ export default function App() {
     const saved = loadState();
     if (saved) {
       const now = Date.now();
-      const allUpgrades = Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
+      const allUpgrades = createEmptyUpgrades();
       const mergedUpgrades = { ...allUpgrades, ...saved.upgrades };
       const savedWithUpgrades = { ...saved, upgrades: mergedUpgrades };
       const seconds = clamp((now - (saved.lastTick || now)) / 1000, 0, 60 * 60 * 8);
       const derived = deriveStats(savedWithUpgrades);
       const dmg = derived.dps * seconds;
-      let ship = { ...saved.ship };
-      let stardust = saved.stardust;
-      let totalEarned = saved.totalEarned;
-      let remaining = dmg;
-      while (remaining > 0) {
-        const dealt = Math.min(ship.hp, remaining);
-        ship.hp -= dealt;
-        remaining -= dealt;
-        if (ship.hp <= 0) {
-          const reward = Math.floor(ship.reward * derived.lootMultiplier);
-          stardust += reward; totalEarned += reward; ship = shipForLevel(ship.level + 1);
-        }
-      }
+      const { ship, rewardEarned } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier);
+      const stardust = saved.stardust + rewardEarned;
+      const totalEarned = saved.totalEarned + rewardEarned;
       return { ...savedWithUpgrades, stardust, totalEarned, ship, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0, unicornCount: saved.unicornCount ?? 1 };
     }
-    return {
-      stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
-      ship: shipForLevel(1), upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), autoBuy: true, lastTick: Date.now(),
-      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0, unicornCount: 1,
-    };
+    return createFreshGameState();
   });
 
   const derived = useMemo(() => deriveStats(game), [game]);
@@ -190,20 +225,11 @@ export default function App() {
       setGame((prev) => {
         let g = { ...prev };
         g.lastTick = Date.now();
-        let ship = { ...g.ship };
-        let stardust = g.stardust;
-        let totalEarned = g.totalEarned;
-        let dpsPerTick = derived.dps / 20;
-        let remaining = dpsPerTick;
-        while (remaining > 0) {
-          const dealt = Math.min(ship.hp, remaining);
-          ship.hp -= dealt; remaining -= dealt;
-          if (ship.hp <= 0) {
-            const reward = Math.floor(ship.reward * derived.lootMultiplier);
-            stardust += reward; totalEarned += reward; ship = shipForLevel(ship.level + 1);
-          }
-        }
-        g.ship = ship; g.stardust = stardust; g.totalEarned = totalEarned;
+        const dpsPerTick = derived.dps / 20;
+        const { ship, rewardEarned } = applyDamageToShip(g.ship, dpsPerTick, derived.lootMultiplier);
+        g.ship = ship;
+        g.stardust += rewardEarned;
+        g.totalEarned += rewardEarned;
         if (g.autoBuy) {
           let bought = false;
           while (true) {
@@ -265,17 +291,11 @@ export default function App() {
       
       const isCrit = Math.random() < derived.critChance;
       const dmg = isCrit ? derived.clickDamage * derived.critMult : derived.clickDamage;
-      let ship = { ...g.ship };
-      const shipDestroyed = ship.hp <= dmg;
-      ship.hp -= dmg;
-      let stardust = g.stardust;
-      let totalEarned = g.totalEarned;
-      if (ship.hp <= 0) {
-        const reward = Math.floor(ship.reward * derived.lootMultiplier);
-        stardust += reward; totalEarned += reward; 
-        ship = shipForLevel(ship.level + 1);
-      }
-      g.ship = ship; g.stardust = stardust; g.totalEarned = totalEarned;
+      const shipDestroyed = g.ship.hp <= dmg;
+      const { ship, rewardEarned } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier);
+      g.ship = ship;
+      g.stardust += rewardEarned;
+      g.totalEarned += rewardEarned;
       
       if (isCrit && Math.random() < 0.05) {
         g.unicornCount += 1;
@@ -306,10 +326,9 @@ export default function App() {
 
   function resetProgress() {
     if (!confirm("Reset all progress?")) return;
-    const fresh = { stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
-      ship: shipForLevel(1), upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), autoBuy: true, lastTick: Date.now(),
-      prestigeGems: 0, totalPrestiges: 0, comboCount: 0, comboExpiry: 0, unicornCount: 1 } as GameSnapshot;
-    setGame(fresh); saveState(fresh);
+    const fresh = createFreshGameState();
+    setGame(fresh);
+    saveState(fresh);
   }
 
   function performPrestige() {
@@ -321,17 +340,11 @@ export default function App() {
     if (!confirm(`Prestige and reset progress to gain ${gemsToAward} Cosmic Gem${gemsToAward > 1 ? 's' : ''}? This will reset your ship, upgrades, and stardust, but keep your gems for a permanent ${(gemsToAward * 2)}% earnings bonus!`)) return;
     
     const prestiged = {
-      stardust: 0, totalEarned: 0, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3,
-      ship: shipForLevel(1), 
-      upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])), 
-      autoBuy: true, 
-      lastTick: Date.now(),
+      ...createFreshGameState(),
       prestigeGems: game.prestigeGems + gemsToAward,
       totalPrestiges: game.totalPrestiges + 1,
-      comboCount: 0,
-      comboExpiry: 0,
       unicornCount: game.unicornCount
-    } as GameSnapshot;
+    };
     setGame(prestiged); 
     saveState(prestiged);
   }
@@ -561,16 +574,28 @@ const BEAM_COLORS = [
 ];
 
 function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolean; unicornIndex?: number; unicornCount?: number }) {
-  // Calculate beam origin based on unicorn position
-  const startX = 4 + unicornIndex * 12 + 4; // Center of each unicorn card
-  const startY = 100 - (6 + (unicornIndex % 2) * 10 + 6); // Bottom position + card height
+  const startX = 4 + unicornIndex * 12 + 4;
+  const startY = 100 - (6 + (unicornIndex % 2) * 10 + 6);
   
   const colorScheme = BEAM_COLORS[unicornIndex % BEAM_COLORS.length];
-  // Much straighter beam path - closer to the reference image
-  const beamPath = `M${startX} ${startY} L 85 50`;
-  
-  // Use a unique ID based on React's internal rendering to avoid conflicts
   const uniqueId = `${unicornIndex}-${Date.now()}-${Math.random()}`;
+  const duration = crit ? 700 : 600;
+  const endX = "85";
+  const endY = "50";
+  
+  const BeamLine = ({ stroke, strokeWidth, strokeOpacity, animation }: { stroke: string; strokeWidth: number; strokeOpacity?: number; animation: string }) => (
+    <line
+      x1={startX}
+      y1={startY}
+      x2={endX}
+      y2={endY}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      strokeOpacity={strokeOpacity}
+      filter={strokeOpacity ? `url(#glow-${uniqueId})` : undefined}
+      style={{ opacity: 0, animation }}
+    />
+  );
   
   return (
     <svg className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -590,59 +615,34 @@ function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolea
         </filter>
       </defs>
 
-      {/* Outer glow layer for maximum visibility */}
-      <line 
-        x1={startX} 
-        y1={startY} 
-        x2="85" 
-        y2="50" 
-        stroke={colorScheme.mid} 
-        strokeWidth={crit ? 12 : 10} 
-        strokeOpacity="0.4"
-        filter={`url(#glow-${uniqueId})`}
-        style={{ 
-          opacity: 0, 
-          animation: `beamFade ${crit ? 700 : 600}ms cubic-bezier(.1,.5,.1,1) forwards` 
-        }} 
+      <BeamLine 
+        stroke={colorScheme.mid}
+        strokeWidth={crit ? 12 : 10}
+        strokeOpacity={0.4}
+        animation={`beamFade ${duration}ms cubic-bezier(.1,.5,.1,1) forwards`}
       />
-      {/* Main beam with gradient */}
-      <line 
-        x1={startX} 
-        y1={startY} 
-        x2="85" 
-        y2="50" 
-        stroke={`url(#beamGrad-${uniqueId})`} 
-        strokeWidth={crit ? 6 : 5} 
-        filter={`url(#glow-${uniqueId})`} 
-        style={{ 
-          opacity: 0, 
-          animation: `beamFade ${crit ? 700 : 600}ms cubic-bezier(.1,.5,.1,1) forwards` 
-        }} 
+      <BeamLine 
+        stroke={`url(#beamGrad-${uniqueId})`}
+        strokeWidth={crit ? 6 : 5}
+        strokeOpacity={1}
+        animation={`beamFade ${duration}ms cubic-bezier(.1,.5,.1,1) forwards`}
       />
-      {/* Inner bright core */}
-      <line 
-        x1={startX} 
-        y1={startY} 
-        x2="85" 
-        y2="50" 
-        stroke="#ffffff" 
-        strokeWidth={crit ? 3 : 2.5} 
-        style={{ 
-          opacity: 0, 
-          animation: `beamFade ${crit ? 700 : 600}ms ease-out forwards` 
-        }} 
+      <line
+        x1={startX}
+        y1={startY}
+        x2={endX}
+        y2={endY}
+        stroke="#ffffff"
+        strokeWidth={crit ? 3 : 2.5}
+        style={{ opacity: 0, animation: `beamFade ${duration}ms ease-out forwards` }}
       />
-      {/* Origin glow */}
       <circle 
         cx={startX} 
         cy={startY} 
         r={crit ? 4 : 3} 
         fill={colorScheme.start}
         filter={`url(#glow-${uniqueId})`}
-        style={{ 
-          opacity: .95, 
-          animation: `impactFlash ${crit ? 700 : 600}ms ease-out forwards` 
-        }} 
+        style={{ opacity: .95, animation: `impactFlash ${duration}ms ease-out forwards` }} 
       />
     </svg>
   );
