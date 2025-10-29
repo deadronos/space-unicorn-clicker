@@ -111,6 +111,10 @@ const UPGRADE_DEFS: UpgradeDef[] = [
 
 function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
+function createEmptyUpgrades(): Record<string, UpgradeState> {
+  return Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
+}
+
 function deriveStats(base: GameSnapshot): GameSnapshot {
   const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, unicornCount: 1 };
   for (const def of UPGRADE_DEFS) def.apply(g);
@@ -153,7 +157,7 @@ function createFreshGameState(): GameSnapshot {
     critChance: 0.02,
     critMult: 3,
     ship: shipForLevel(1),
-    upgrades: Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }])),
+    upgrades: createEmptyUpgrades(),
     autoBuy: true,
     lastTick: Date.now(),
     prestigeGems: 0,
@@ -182,7 +186,7 @@ export default function App() {
     const saved = loadState();
     if (saved) {
       const now = Date.now();
-      const allUpgrades = Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
+      const allUpgrades = createEmptyUpgrades();
       const mergedUpgrades = { ...allUpgrades, ...saved.upgrades };
       const savedWithUpgrades = { ...saved, upgrades: mergedUpgrades };
       const seconds = clamp((now - (saved.lastTick || now)) / 1000, 0, 60 * 60 * 8);
