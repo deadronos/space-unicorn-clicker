@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2025-10-27
+
+### Unicorn Horn Beams (TASK006)
+
+- Documented TASK006 and refreshed `memory/tasks/_index.md` before making code changes.
+- Reworked the beam rendering logic to compute each unicorn's horn location and reuse those positions for manual and auto-fired beams.
+- `npm run build` fails in this environment because Rollup cannot find the optional `@rollup/rollup-linux-x64-gnu` binary; see the CLI error for details.
+
 ## 2025-10-26
 
 ### Unicorn Squadron Feature ✅ (TASK005)

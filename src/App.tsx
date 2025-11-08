@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const UNICORN_IMG = (import.meta as any).env?.BASE_URL ? `${(import.meta as any).env.BASE_URL}unicorn.jpg` : "/unicorn.jpg";
 
@@ -42,6 +42,16 @@ interface GameSnapshot {
   comboCount: number;
   comboExpiry: number;
   unicornCount: number;
+}
+
+interface BeamState {
+  id: number;
+  start: number;
+  duration: number;
+  crit?: boolean;
+  unicornIndex?: number;
+  startX: number;
+  startY: number;
 }
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(n, max));
@@ -169,7 +179,7 @@ function createFreshGameState(): GameSnapshot {
 }
 
 export default function App() {
-  const [beams, setBeams] = useState<{ id: number; start: number; duration: number; crit?: boolean; unicornIndex?: number }[]>([]);
+  const [beams, setBeams] = useState<BeamState[]>([]);
   const [sparks, setSparks] = useState<{ id: number; start: number; duration: number }[]>([]);
   const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }[]>([]);
   const [explosions, setExplosions] = useState<{ id: number; start: number }[]>([]);
@@ -179,6 +189,8 @@ export default function App() {
   const damageId = useRef(0);
   const explosionId = useRef(0);
   const unicornNotificationId = useRef(0);
+  const clickZoneRef = useRef<HTMLButtonElement | null>(null);
+  const unicornRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lastAutoBeam = useRef<number>(Date.now());
   const lastClickTime = useRef<number>(0);
 
@@ -201,6 +213,43 @@ export default function App() {
   });
 
   const derived = useMemo(() => deriveStats(game), [game]);
+
+  const getUnicornHornPosition = useCallback((index: number) => {
+    const areaRect = clickZoneRef.current?.getBoundingClientRect();
+    const cardEl = unicornRefs.current[index];
+    if (areaRect && cardEl) {
+      const cardRect = cardEl.getBoundingClientRect();
+      const hornX = cardRect.left + cardRect.width * 0.5;
+      const hornY = cardRect.top + cardRect.height * 0.25;
+      const relX = ((hornX - areaRect.left) / areaRect.width) * 100;
+      const relY = ((hornY - areaRect.top) / areaRect.height) * 100;
+      if (Number.isFinite(relX) && Number.isFinite(relY)) {
+        return { x: clamp(relX, 2, 98), y: clamp(relY, 2, 98) };
+      }
+    }
+    const fallback = UNICORN_CARD_LAYOUT[index] ?? UNICORN_CARD_LAYOUT[0];
+    const fallbackX = fallback.left + 8;
+    const fallbackY = 100 - (fallback.bottom + 18);
+    return { x: clamp(fallbackX, 3, 97), y: clamp(fallbackY, 5, 90) };
+  }, []);
+
+  const queueBeam = useCallback((unicornIndex: number, crit: boolean) => {
+    const now = Date.now();
+    const { x, y } = getUnicornHornPosition(unicornIndex);
+    const duration = crit ? 700 : 600;
+    setBeams((prev) => [
+      ...prev,
+      { id: ++beamId.current, start: now, duration, crit, unicornIndex, startX: x, startY: y },
+    ]);
+    setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
+  }, [getUnicornHornPosition]);
+
+  const spawnHornBeams = useCallback((crit: boolean, count: number) => {
+    const safeCount = Math.min(Math.max(Math.floor(count), 0), UNICORN_CARD_LAYOUT.length);
+    for (let i = 0; i < safeCount; i++) {
+      queueBeam(i, crit);
+    }
+  }, [queueBeam]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -248,24 +297,13 @@ export default function App() {
       const intervalMs = Math.max(120, 800 / Math.max(1, derived.dps));
       if (derived.dps > 0 && now - lastAutoBeam.current > intervalMs) {
         lastAutoBeam.current = now;
-        // Spawn beams from all unicorns in the squadron
-        const unicornCount = Math.min(derived.unicornCount, 5);
-        for (let i = 0; i < unicornCount; i++) {
-          setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: 600, unicornIndex: i }]);
-        }
-        setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: 600 }]);
+        spawnHornBeams(false, derived.unicornCount);
       }
     }, 50);
     return () => clearInterval(interval);
-  }, [derived.dps, derived.lootMultiplier]);
+  }, [derived.dps, derived.lootMultiplier, derived.unicornCount, spawnHornBeams]);
 
   useEffect(() => { const id = setInterval(() => saveState(game), 2000); return () => clearInterval(id); }, [game]);
-
-  function spawnBeam(crit = false, unicornIndex = 0) {
-    const now = Date.now();
-    setBeams((bs) => [...bs, { id: ++beamId.current, start: now, duration: crit ? 700 : 600, crit, unicornIndex }]);
-    setSparks((ss) => [...ss, { id: ++sparkId.current, start: now, duration: crit ? 700 : 600 }]);
-  }
 
   function handleAttack(e: React.MouseEvent) {
     e.preventDefault();
@@ -274,6 +312,8 @@ export default function App() {
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     
+    const isCrit = Math.random() < derived.critChance;
+    const unicornBeams = Math.min(derived.unicornCount, UNICORN_CARD_LAYOUT.length);
     setGame((prev) => {
       const g = { ...prev };
       const timeSinceLastClick = now - lastClickTime.current;
@@ -289,7 +329,6 @@ export default function App() {
         g.comboExpiry = 0;
       }
       
-      const isCrit = Math.random() < derived.critChance;
       const dmg = isCrit ? derived.clickDamage * derived.critMult : derived.clickDamage;
       const shipDestroyed = g.ship.hp <= dmg;
       const { ship, rewardEarned } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier);
@@ -311,7 +350,7 @@ export default function App() {
     });
     
     lastClickTime.current = now;
-    spawnBeam(false);
+    spawnHornBeams(isCrit, unicornBeams);
   }
 
   function buy(def: UpgradeDef) {
@@ -349,6 +388,7 @@ export default function App() {
     saveState(prestiged);
   }
 
+  const visibleUnicornCount = Math.min(derived.unicornCount, UNICORN_CARD_LAYOUT.length);
   const shipPct = (derived.ship.hp / derived.ship.maxHp) * 100;
 
   return (
@@ -433,19 +473,21 @@ export default function App() {
             </div>
 
             <button
+              ref={clickZoneRef}
               onClick={handleAttack}
               className="relative w-full aspect-[16/7] overflow-hidden rounded-xl border border-indigo-500/50 bg-[radial-gradient(circle_at_top,rgba(99,102,241,.35),rgba(15,23,42,.6))] flex items-center justify-center hover:scale-[1.01] active:scale-[0.99] transition"
               title="Click to fire your horn laser!"
             >
               <div className="absolute inset-0 starfield z-20">
                 {/* Render unicorn cards - each with their own image */}
-                {Array.from({ length: Math.min(derived.unicornCount, 5) }).map((_, i) => (
+                {UNICORN_CARD_LAYOUT.slice(0, visibleUnicornCount).map((pos, i) => (
                   <div 
                     key={i}
+                    ref={(el) => { unicornRefs.current[i] = el ?? null; }}
                     className="absolute bg-slate-800/40 rounded-lg p-2 border border-indigo-400/50 backdrop-blur-sm" 
                     style={{ 
-                      left: `${4 + i * 12}%`, 
-                      bottom: `${6 + (i % 2) * 10}%`,
+                      left: `${pos.left}%`, 
+                      bottom: `${pos.bottom}%`,
                       width: '80px',
                       height: '100px',
                       opacity: 0.9 - i * 0.08,
@@ -467,7 +509,15 @@ export default function App() {
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
                   <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
-                {beams.map((b) => (<BeamVisual key={b.id} crit={!!b.crit} unicornIndex={b.unicornIndex ?? 0} unicornCount={Math.min(derived.unicornCount, 5)} />))}
+                {beams.map((b) => (
+                  <BeamVisual
+                    key={b.id}
+                    crit={!!b.crit}
+                    unicornIndex={b.unicornIndex ?? 0}
+                    startX={b.startX}
+                    startY={b.startY}
+                  />
+                ))}
                 {sparks.map((s) => (<ImpactSparks key={s.id} duration={s.duration} />))}
                 {damageNumbers.map((dn) => (
                   <div key={dn.id} className="absolute pointer-events-none font-bold text-2xl" 
@@ -573,15 +623,28 @@ const BEAM_COLORS = [
   { start: '#fbbf24', mid: '#f59e0b', end: '#ffffff' }, // Yellow
 ];
 
-function BeamVisual({ crit, unicornIndex = 0, unicornCount = 1 }: { crit: boolean; unicornIndex?: number; unicornCount?: number }) {
-  const startX = 4 + unicornIndex * 12 + 4;
-  const startY = 100 - (6 + (unicornIndex % 2) * 10 + 6);
+const UNICORN_CARD_LAYOUT = Array.from({ length: 5 }, (_, i) => ({
+  left: 4 + i * 12,
+  bottom: 6 + (i % 2) * 10,
+}));
+
+function BeamVisual({
+  crit,
+  unicornIndex = 0,
+  startX,
+  startY,
+}: {
+  crit: boolean;
+  unicornIndex?: number;
+  startX: number;
+  startY: number;
+}) {
   
   const colorScheme = BEAM_COLORS[unicornIndex % BEAM_COLORS.length];
   const uniqueId = `${unicornIndex}-${Date.now()}-${Math.random()}`;
   const duration = crit ? 700 : 600;
-  const endX = "85";
-  const endY = "50";
+  const endX = 85;
+  const endY = 50;
   
   const BeamLine = ({ stroke, strokeWidth, strokeOpacity, animation }: { stroke: string; strokeWidth: number; strokeOpacity?: number; animation: string }) => (
     <line

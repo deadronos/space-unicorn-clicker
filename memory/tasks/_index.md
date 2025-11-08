@@ -1,21 +1,20 @@
 # Tasks Index
 
-## Completed
+## In Progress
 
-- [TASK002] Implement Prestige System - Completed 2025-10-26
-- [TASK003] Add Enhanced Visual Effects - Completed 2025-10-26
-- [TASK004] Implement Advanced Upgrade Types - Completed 2025-10-26
-
-## Completed
-
-- [TASK005] Add Unicorn Spawning Upgrade - Completed 2025-10-26
-- [TASK002] Implement Prestige System - Completed 2025-10-26
-- [TASK003] Add Enhanced Visual Effects - Completed 2025-10-26
-- [TASK004] Implement Advanced Upgrade Types - Completed 2025-10-26
+- [TASK001] Create tests for deriveStats and costOf — In Progress 2025-10-22
+- [TASK006] Draw unicorn horn beams — In Progress 2025-10-27
 
 ## Pending
 
-- [TASK001] Create tests for deriveStats and costOf - Started
+- (none yet)
+
+## Completed
+
+- [TASK002] Implement Prestige System — Completed 2025-10-26
+- [TASK003] Add Enhanced Visual Effects — Completed 2025-10-26
+- [TASK004] Implement Advanced Upgrade Types — Completed 2025-10-26
+- [TASK005] Add Unicorn Spawning Upgrade — Completed 2025-10-26
 
 ## Abandoned
 
