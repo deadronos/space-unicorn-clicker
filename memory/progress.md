@@ -6,7 +6,8 @@
 
 - Documented TASK006 and refreshed `memory/tasks/_index.md` before making code changes.
 - Reworked the beam rendering logic to compute each unicorn's horn location and reuse those positions for manual and auto-fired beams.
-- `npm run build` fails in this environment because Rollup cannot find the optional `@rollup/rollup-linux-x64-gnu` binary; see the CLI error for details.
+- Ensured the starfield background/pseudo layers sit behind the beam layer and gave the lasers their own z-order so the horns-to-ship beams are visible again.
+- `npm run build` now succeeds locally (tsc + Vite build) after ensuring no clipping layers block the beam SVG surfaces.
 
 ## 2025-10-26
 

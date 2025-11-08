@@ -410,7 +410,7 @@ export default function App() {
           100% { transform: translate(0,0) rotate(0); }
         }
         .starfield::before, .starfield::after {
-          content: ""; position:absolute; inset:0; pointer-events:none; background-repeat:repeat; background-size:512px 512px; opacity:.35;
+          content: ""; position:absolute; inset:0; pointer-events:none; background-repeat:repeat; background-size:512px 512px; opacity:.35; z-index:-1;
         }
         .starfield::before { background-image: radial-gradient(white 1px, transparent 1px); animation: drift1 60s linear infinite; }
         .starfield::after  { background-image: radial-gradient(#93c5fd 1px, transparent 1px); animation: drift2 120s linear infinite; opacity:.25; }
@@ -478,7 +478,7 @@ export default function App() {
               className="relative w-full aspect-[16/7] overflow-hidden rounded-xl border border-indigo-500/50 bg-[radial-gradient(circle_at_top,rgba(99,102,241,.35),rgba(15,23,42,.6))] flex items-center justify-center hover:scale-[1.01] active:scale-[0.99] transition"
               title="Click to fire your horn laser!"
             >
-              <div className="absolute inset-0 starfield z-20">
+              <div className="absolute inset-0 starfield z-0">
                 {/* Render unicorn cards - each with their own image */}
                 {UNICORN_CARD_LAYOUT.slice(0, visibleUnicornCount).map((pos, i) => (
                   <div 
@@ -661,7 +661,7 @@ function BeamVisual({
   );
   
   return (
-    <svg className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <svg className="absolute inset-0 pointer-events-none z-30" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
         <linearGradient id={`beamGrad-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={colorScheme.start} stopOpacity="1" />

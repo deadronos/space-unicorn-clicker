@@ -1,5 +1,5 @@
 # TASK006 - Draw unicorn horn beams
-**Status:** In Progress  
+**Status:** Completed  
 **Added:** 2025-10-27  
 **Updated:** 2025-10-27
 
@@ -19,6 +19,7 @@ There should be actual beams drawn from the unicorns horn to the target ship, au
 ## Progress Log
 ### 2025-10-27
 - Task created. Ready to compute horn positions and rewire the beam rendering pipeline.
+- Verified that beams were being occluded by the starfield overlays, lowered the starfield z-order and forced the pseudo layers behind the content, and gave the beam `svg` its own high stacking context so manual/autofire lasers now appear.
 
 ## Acceptance Criteria & Tests
 - Clicking fires beams that begin at the horns of the rendered unicorn cards and travel toward the ship.
