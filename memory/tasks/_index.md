@@ -5,8 +5,7 @@
 - [TASK001] Create tests for deriveStats and costOf — In Progress 2025-10-22
 
 ## Pending
-
-- (none yet)
+- [TASK007] Pixi renderer rewrite — Pending 2025-11-08
 
 ## Completed
 
