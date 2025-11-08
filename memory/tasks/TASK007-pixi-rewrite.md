@@ -1,5 +1,5 @@
 # TASK007 - Rewrite visuals with Pixi.js
-**Status:** In Progress  
+**Status:** Completed  
 **Added:** 2025-11-08  
 **Updated:** 2025-11-08
 
@@ -153,6 +153,7 @@ Notes and next steps:
 
 ## Progress Log
 - 2025-11-08: Task created and draft plan written. Waiting for approval to proceed with implementation phases.
+- 2025-11-08: Implemented Pixi rewrite and integrated visuals with central pools. `src/App.tsx` now routes visual spawns through `BeamPool.spawn`, `ImpactParticles.spawn`, and `DamageNumberPool.spawn` with `{ app: pixiApp, pixiOpts }` when Pixi is mounted. Ran `npx vitest --run` and `npx tsc --noEmit` — tests and typecheck passed. Ready for commit/PR.
 
 ## Acceptance Criteria (short)
 - Beam spawn + impact animations occur visually in Pixi and align with existing damage rewards.
@@ -220,3 +221,11 @@ Notes and next steps:
     3. Optionally add `canvas` (node-canvas) to devDependencies for improved drawing tests.
 
 **Reviewed:** 2025-11-08
+
+## Completion Summary
+
+- **Status:** Completed  
+- **Completed:** 2025-11-08  
+
+### Final Progress
+- 2025-11-08: Integrated central pools into `src/App.tsx` — `BeamPool.spawn`, `ImpactParticles.spawn`, and `DamageNumberPool.spawn` are now invoked with `{ app: pixiApp, pixiOpts }` when Pixi is available. Verified with `npx vitest --run` and `npx tsc --noEmit` (both green). Task marked completed and ready for commit and PR.
