@@ -663,7 +663,7 @@ function BeamVisual({
   );
   
   return (
-    <svg className="absolute inset-0 pointer-events-none z-30" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <svg className="absolute inset-0 pointer-events-none z-50" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
         <linearGradient id={`beamGrad-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={colorScheme.start} stopOpacity="1" />
