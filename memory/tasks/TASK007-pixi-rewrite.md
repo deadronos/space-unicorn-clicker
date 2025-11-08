@@ -95,3 +95,20 @@ TL;DR: Create a small Pixi rendering layer (wrapper + effects modules) that rece
 - Reasonable performance under test load (10+ beams + particles).
 
 ---
+
+## Phase 2 Complete
+
+- **Review status:** APPROVED
+- **Summary:** Phase 2 implemented a minimal `PixiStage` wrapper and a `PixiMountPoint` container. The `PixiStage` mounts a canvas into its container using the `createPixiApp` helper, exposes an imperative ref API with `spawnBeam` and `spawnImpact` methods, and properly cleans up on unmount. Tests verify that a `<canvas>` is attached and that the ref methods are callable.
+- **Files created:**
+    - `src/pixi/PixiStage.tsx`
+    - `src/components/PixiMountPoint.tsx`
+    - `src/pixi/pixi-stage.test.ts`
+- **Tests executed:** `npx vitest --run` — 3 passed, 0 failed.
+- **Notes:**
+    - Jsdom lacks a real 2D canvas context (`getContext`), so tests emit warnings like "Not implemented: HTMLCanvasElement's getContext()". The component guards these cases; consider adding the `canvas` (node-canvas) dev dependency for richer drawing tests.
+    - There's a deprecation warning about importing `act` from `react-dom/test-utils`; prefer `import { act } from 'react'` in future tests.
+    - A focused TypeScript check highlighted project-level `tsconfig.json` issues (missing `lib` entries and JSX config) which should be fixed before enabling strict CI type-checking.
+
+**Next steps**
+- Move to Phase 3: implement pooled Beam objects and lifecycle tests.

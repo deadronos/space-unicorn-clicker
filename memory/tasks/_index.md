@@ -3,9 +3,10 @@
 ## In Progress
 
 - [TASK001] Create tests for deriveStats and costOf — In Progress 2025-10-22
+ - [TASK007] Pixi renderer rewrite — In Progress 2025-11-08
 
 ## Pending
-- [TASK007] Pixi renderer rewrite — Pending 2025-11-08
+ 
 
 ## Completed
 
