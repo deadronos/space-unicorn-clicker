@@ -71,6 +71,21 @@ TL;DR: Create a small Pixi rendering layer (wrapper + effects modules) that rece
 
 ---
 
+## Phase 1 Complete
+
+- **Review status:** APPROVED
+- **Summary:** Phase 1 deliverables for TASK007 (Pixi rewrite) were reviewed. Vitest tests ran and passed (2/2). `vitest.config.ts` sets `watch: false` and `test.environment = 'jsdom'`. The created Pixi helper and loader export the expected symbols and behave correctly at runtime. A full `tsc --noEmit` across the repo produced ambient/type errors unrelated to the new code (see notes).
+- **Files created:**
+    - `src/pixi/textureLoader.ts`
+    - `src/pixi/usePixiApp.ts`
+    - `src/pixi/loader.test.ts`
+    - `src/pixi/usePixiApp.test.ts`
+- **Tests executed:** `npx vitest --run` — 2 passed, 0 failed.
+- **Notes:** Running `npx tsc --noEmit` on the repo surfaced many type errors due to `tsconfig` `lib` settings and ambient typings (missing ES2015/DOM libs). To enable project-wide typechecking, update `tsconfig.json` to include appropriate `lib` entries.
+
+**Next steps**
+- Continue with Phase 2 (PixiStage wrapper and mount).
+
 ## Progress Log
 - 2025-11-08: Task created and draft plan written. Waiting for approval to proceed with implementation phases.
 
