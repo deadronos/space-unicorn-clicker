@@ -106,7 +106,12 @@ const UPGRADE_DEFS: UpgradeDef[] = [
   { id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
     apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; } },
   { id: "squadron", name: "🦄 Unicorn Squadron", desc: "+1 unicorn, each adds +1.5 DPS", baseCost: 5000, costMult: 1.45,
-    apply: (g) => { const lvl = g.upgrades.squadron?.level ?? 0; g.unicornCount = 1 + lvl; g.dps += lvl * 1.5; } },
+    apply: (g) => {
+      const lvl = g.upgrades.squadron?.level ?? 0;
+      if (lvl > 0) {
+        g.dps += g.unicornCount * 1.5;
+      }
+    } },
 ];
 
 function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
@@ -116,7 +121,7 @@ function createEmptyUpgrades(): Record<string, UpgradeState> {
 }
 
 function deriveStats(base: GameSnapshot): GameSnapshot {
-  const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, unicornCount: 1 };
+  const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3 };
   for (const def of UPGRADE_DEFS) def.apply(g);
   g.critChance = clamp(g.critChance, 0, 0.8);
   g.lootMultiplier *= getGemMultiplier(g.prestigeGems);
@@ -319,7 +324,13 @@ export default function App() {
       const g = { ...prev };
       const u = g.upgrades[def.id];
       const cost = costOf(def, u.level);
-      if (g.stardust >= cost) { g.stardust -= cost; u.level += 1; }
+      if (g.stardust >= cost) {
+        g.stardust -= cost;
+        u.level += 1;
+        if (def.id === "squadron") {
+          g.unicornCount += 1;
+        }
+      }
       return g;
     });
   }
