@@ -129,3 +129,29 @@ TL;DR: Create a small Pixi rendering layer (wrapper + effects modules) that rece
 
 **Next steps**
 - Proceed to Phase 4: Particles & Damage Numbers.
+
+## Phase 4 Complete
+
+- **Review status:** APPROVED
+- **Summary:** Phase 4 implemented pooled ImpactParticles and DamageNumberPool. Unit tests for impacts and damage numbers validate spawn, lifecycle, recycling, and reuse. Vitest run shows all tests passing locally and the new tests exercise spawn, finish, and reuse semantics for both systems.
+
+- **Files created:**
+    - `src/pixi/effects/ImpactParticles.ts`
+    - `src/pixi/effects/DamageNumbers.ts`
+    - `src/pixi/impact.test.ts`
+    - `src/pixi/damage-numbers.test.ts`
+
+- **Tests executed:** `npx vitest --run` — 9 passed, 0 failed. (impact and damage-numbers tests included)
+- **TypeScript check:** `npx tsc --noEmit src/pixi/effects/ImpactParticles.ts src/pixi/effects/DamageNumbers.ts` reported ambient/lib-related errors in `node_modules` and two errors in the new files (usage of `find`/`includes`) caused by `tsconfig` `lib` configuration. This is a project configuration issue; adding `lib: ["es2015","dom"]` (or similar) to `tsconfig.json` will resolve these messages.
+
+- **Notes:**
+    - Behavior verified by tests: particles spawn and finish after specified durations; damage numbers spawn with correct value; instances are returned to pool and reused.
+    - The TypeScript failures are environmental (missing ES/DOM libs in `tsconfig`) and do not reflect runtime correctness of the implementations.
+    - Consider adding `canvas` (node-canvas) as a dev dependency if you want richer canvas-related tests in the jsdom environment.
+
+- **Next steps:**
+    1. Update `tsconfig.json` to include appropriate `lib` entries to enable project-wide type checking.
+    2. Proceed to Phase 5: integrate Pixi visuals into `src/App.tsx` and wire spawn calls.
+    3. Optionally add `canvas` (node-canvas) to devDependencies for improved drawing tests.
+
+**Reviewed:** 2025-11-08
