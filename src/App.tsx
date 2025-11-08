@@ -260,22 +260,22 @@ export default function App() {
     ]);
     setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
     try {
-      // pool logic (game-logic level)
-      if (beamPoolRef.current) {
-        beamPoolRef.current.spawn(duration);
-      }
-
-      // Spawn Pixi visual (convert percent -> pixel coords)
+      // pool logic (game-logic level) — prefer central pool and optionally preallocate PIXI visuals
       const container = clickZoneRef.current;
       const pixi = pixiRef.current;
-      if (pixi && container) {
-        const rect = container.getBoundingClientRect();
-        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-        const startXpx = (x / 100) * rect.width * dpr;
-        const startYpx = (y / 100) * rect.height * dpr;
-        const endXpx = rect.width * 0.85 * dpr;
-        const endYpx = rect.height * 0.5 * dpr;
-        pixi.spawnBeam({ x0: startXpx, y0: startYpx, x1: endXpx, y1: endYpx, color: crit ? '#fbbf24' : '#60a5fa', width: crit ? 6 : 4, duration });
+      if (beamPoolRef.current) {
+        if (pixi && container) {
+          const rect = container.getBoundingClientRect();
+          const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+          const startXpx = (x / 100) * rect.width * dpr;
+          const startYpx = (y / 100) * rect.height * dpr;
+          const endXpx = rect.width * 0.85 * dpr;
+          const endYpx = rect.height * 0.5 * dpr;
+          const pixiApp = pixi.app ?? (pixi.getApp ? pixi.getApp() : undefined);
+          beamPoolRef.current.spawn(duration, { app: pixiApp, pixiOpts: { x0: startXpx, y0: startYpx, x1: endXpx, y1: endYpx, color: crit ? '#fbbf24' : '#60a5fa', width: crit ? 6 : 4 } });
+        } else {
+          beamPoolRef.current.spawn(duration);
+        }
       }
     } catch (e) {
       // swallow visual errors
@@ -381,17 +381,23 @@ export default function App() {
       
       setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: dmg, x, y, start: now, crit: isCrit }]);
       try {
-        if (damagePoolRef.current) {
-          damagePoolRef.current.spawn(dmg, 1000);
-        }
         const container = clickZoneRef.current;
         const pixi = pixiRef.current;
-        if (pixi && container) {
-          const rect = container.getBoundingClientRect();
-          const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-          const px = (x / 100) * rect.width * dpr;
-          const py = (y / 100) * rect.height * dpr;
-          pixi.spawnImpact({ x: px, y: py, r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' });
+        if (damagePoolRef.current) {
+          if (pixi && container) {
+            const rect = container.getBoundingClientRect();
+            const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+            const px = (x / 100) * rect.width * dpr;
+            const py = (y / 100) * rect.height * dpr;
+            const pixiApp = pixi.app ?? (pixi.getApp ? pixi.getApp() : undefined);
+            damagePoolRef.current.spawn(dmg, 1000, { app: pixiApp, pixiOpts: { x: px, y: py, r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
+            // spawn impact particles via central impact pool as well
+            if (impactPoolRef.current) {
+              impactPoolRef.current.spawn(px, py, isCrit ? 12 : 8, isCrit ? 600 : 400, { app: pixiApp, pixiOpts: { r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
+            }
+          } else {
+            damagePoolRef.current.spawn(dmg, 1000);
+          }
         }
       } catch (e) {
         // swallow
