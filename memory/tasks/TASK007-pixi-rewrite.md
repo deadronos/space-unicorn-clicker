@@ -74,6 +74,29 @@ TL;DR: Create a small Pixi rendering layer (wrapper + effects modules) that rece
 ## Phase 1 Complete
 
 - **Review status:** APPROVED
+## Phase 6: Visual polish & assets (summary)
+
+**Completed items (Phase 6 partial):**
+
+- Implemented PIXI-aware app creation in `src/pixi/usePixiApp.ts` with DPR/resolution and responsive resizing support.
+- Updated `src/pixi/PixiStage.tsx` to prefer `PIXI.Graphics` + wrapper classes when `globalThis.PIXI` is present, while keeping the 2D canvas fallback intact for jsdom/tests.
+- Added lightweight display wrappers: `src/pixi/display/BeamGraphic.ts` and `src/pixi/display/ImpactGraphic.ts` that encapsulate creation, drawing and cleanup of PIXI.Graphics.
+- Added `src/pixi/pixi-stage-pixi.test.ts` which mocks a minimal `PIXI` (Application + Graphics) and asserts that `spawnBeam` adds/removes graphics from the stage.
+
+Files changed in Phase 6:
+
+- `src/pixi/usePixiApp.ts`
+- `src/pixi/PixiStage.tsx`
+- `src/pixi/display/BeamGraphic.ts`
+- `src/pixi/display/ImpactGraphic.ts`
+- `src/pixi/pixi-stage-pixi.test.ts`
+
+Notes and next steps:
+
+- Pool integration: Beam/Impact pools are still logically separate; wiring the pools to create/detach the wrappers is recommended next work.
+- TypeScript: kept PIXI interop as `any` to avoid adding `pixi.js` typings; consider adding typed dev dependency if you want strict types.
+- Tests: ran locally (see report) — if any CI type-check failures appear, consider adding `lib` entries to `tsconfig.json`.
+
 - **Summary:** Phase 1 deliverables for TASK007 (Pixi rewrite) were reviewed. Vitest tests ran and passed (2/2). `vitest.config.ts` sets `watch: false` and `test.environment = 'jsdom'`. The created Pixi helper and loader export the expected symbols and behave correctly at runtime. A full `tsc --noEmit` across the repo produced ambient/type errors unrelated to the new code (see notes).
 - **Files created:**
     - `src/pixi/textureLoader.ts`

@@ -88,3 +88,19 @@ Notes:
 - Document new files and add an entry to `memory/tasks/_index.md` and `memory/designs/_index.md` (done by the planning agent).
 
 ---
+
+## Phase 6: Visual polish & assets (summary)
+
+**Completed (Phase 6 partial):** Added real `PIXI.Application` usage when a global `PIXI` is present, improved DPR/resolution handling and responsive resizing in the Pixi app helper, and introduced `BeamGraphic` and `ImpactGraphic` wrappers that encapsulate `PIXI.Graphics` creation, animation and cleanup. Tests were added to mock a minimal `PIXI` runtime and verify that `spawnBeam` adds a Graphics object to the stage and removes it after the configured duration.
+
+Files touched in Phase 6 (summary):
+- `src/pixi/PixiStage.tsx` — use PIXI Graphics when available; keep 2D canvas fallback
+- `src/pixi/usePixiApp.ts` — PIXI-aware app creation, DPR and resize handling, jsdom fallback
+- `src/pixi/display/BeamGraphic.ts` — beam display wrapper using `PIXI.Graphics`
+- `src/pixi/display/ImpactGraphic.ts` — impact display wrapper using `PIXI.Graphics`
+- `src/pixi/pixi-stage-pixi.test.ts` — unit test that mocks `globalThis.PIXI` and verifies stage child lifecycle
+
+Notes:
+- Pooling logic (BeamPool/ImpactParticles) remains compatible with the new display wrappers; further integration (having pools create/detach the Graphics) is recommended as a follow-up but not required for tests.
+- TypeScript changes were kept minimal and use `any` at PIXI interop points to avoid introducing heavy typings for `pixi.js` in the repo.
+

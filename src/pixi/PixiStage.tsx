@@ -1,5 +1,7 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useLayoutEffect, useImperativeHandle, useRef } from 'react';
 import { createPixiApp } from './usePixiApp';
+import BeamGraphic from './display/BeamGraphic';
+import ImpactGraphic from './display/ImpactGraphic';
 
 type PixiStageHandle = {
   spawnBeam: (opts?: any) => void;
@@ -13,8 +15,9 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
   const { className, style, children, ...rest } = props;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<any>(null);
+  const timersRef = useRef<Set<number>>(new Set());
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -44,6 +47,10 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
       return () => {
         window.removeEventListener('resize', updateSize);
         try {
+          try {
+            timersRef.current.forEach((id) => clearTimeout(id));
+            timersRef.current.clear();
+          } catch (err) {}
           app.destroy?.();
         } catch (e) {
           // ignore
@@ -51,6 +58,10 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
       };
     } catch (e) {
       try {
+        try {
+          timersRef.current.forEach((id) => clearTimeout(id));
+          timersRef.current.clear();
+        } catch (err) {}
         app.destroy?.();
       } catch (er) {
         // ignore
@@ -62,6 +73,25 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
     spawnBeam(opts?: any) {
       const app = appRef.current;
       if (!app) return;
+
+      // If PIXI is available, use BeamGraphic which manages its own lifecycle
+      if (typeof (globalThis as any).PIXI !== 'undefined' && (globalThis as any).PIXI.Graphics) {
+        try {
+          const g = new BeamGraphic(app, opts);
+          const duration = opts?.duration ?? 300;
+          const t = window.setTimeout(() => {
+            try {
+              g.destroy();
+            } catch (e) {}
+            try { timersRef.current.delete(t); } catch (er) {}
+          }, duration);
+          try { timersRef.current.add(t); } catch (er) {}
+          return;
+        } catch (e) {
+          // fall back to canvas
+        }
+      }
+
       const canvas = (app as any).view as HTMLCanvasElement;
       try {
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
@@ -84,6 +114,24 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
     spawnImpact(opts?: any) {
       const app = appRef.current;
       if (!app) return;
+
+      if (typeof (globalThis as any).PIXI !== 'undefined' && (globalThis as any).PIXI.Graphics) {
+        try {
+          const g = new ImpactGraphic(app, opts);
+          const duration = opts?.duration ?? 300;
+          const t = window.setTimeout(() => {
+            try {
+              g.destroy();
+            } catch (e) {}
+            try { timersRef.current.delete(t); } catch (er) {}
+          }, duration);
+          try { timersRef.current.add(t); } catch (er) {}
+          return;
+        } catch (e) {
+          // fallback to canvas
+        }
+      }
+
       const canvas = (app as any).view as HTMLCanvasElement;
       try {
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
@@ -102,7 +150,9 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
         // swallow
       }
     },
-    app: appRef.current,
+    get app() {
+      return appRef.current
+    },
   }));
 
   return (
