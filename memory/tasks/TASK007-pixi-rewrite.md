@@ -112,3 +112,20 @@ TL;DR: Create a small Pixi rendering layer (wrapper + effects modules) that rece
 
 **Next steps**
 - Move to Phase 3: implement pooled Beam objects and lifecycle tests.
+
+
+## Phase 3 Complete
+
+- **Review status:** APPROVED
+- **Summary:** Phase 3 implemented a pooled Beam system. `Beam` and `BeamPool` were added under `src/pixi/effects/` and a focused test (`src/pixi/beam.test.ts`) validates allocation, lifecycle, and instance reuse. Vitest shows the new tests passing locally.
+- **Files created:**
+    - `src/pixi/effects/Beam.ts`
+    - `src/pixi/effects/BeamPool.ts`
+    - `src/pixi/beam.test.ts`
+- **Tests executed:** `npx vitest --run` — 5 passed, 0 failed (includes the beam tests).
+- **Notes:**
+    - Jsdom used in the test environment does not implement `HTMLCanvasElement.getContext()`; tests will emit warnings. Consider adding the `canvas` (node-canvas) dev dependency for richer drawing tests if you plan to assert rendering details.
+    - A project-wide `tsc --noEmit` attempt surfaced ambient type errors related to missing ES/DOM libs in `tsconfig.json` (e.g., missing `lib: ["es2015","dom"]`). This is a separate configuration issue; updating `tsconfig.json` to include appropriate `lib` entries will enable full repo type-checking.
+
+**Next steps**
+- Proceed to Phase 4: Particles & Damage Numbers.
