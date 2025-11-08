@@ -20,6 +20,7 @@ There should be actual beams drawn from the unicorns horn to the target ship, au
 ### 2025-10-27
 - Task created. Ready to compute horn positions and rewire the beam rendering pipeline.
 - Verified that beams were being occluded by the starfield overlays, lowered the starfield z-order and forced the pseudo layers behind the content, and gave the beam `svg` its own high stacking context so manual/autofire lasers now appear.
+- Added a dedicated absolutely positioned overlay for beams/sparks/damage/explosion notifications with `z-40` so the lasers render above the background cards and overlay text, making the rendering unmistakably visible.
 
 ## Acceptance Criteria & Tests
 - Clicking fires beams that begin at the horns of the rendered unicorn cards and travel toward the ship.

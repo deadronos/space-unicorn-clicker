@@ -509,6 +509,8 @@ export default function App() {
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
                   <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
+              </div>
+              <div className="absolute inset-0 pointer-events-none z-40">
                 {beams.map((b) => (
                   <BeamVisual
                     key={b.id}
