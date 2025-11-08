@@ -106,7 +106,12 @@ const UPGRADE_DEFS: UpgradeDef[] = [
   { id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
     apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; } },
   { id: "squadron", name: "🦄 Unicorn Squadron", desc: "+1 unicorn, each adds +1.5 DPS", baseCost: 5000, costMult: 1.45,
-    apply: (g) => { const lvl = g.upgrades.squadron?.level ?? 0; g.dps += lvl * 1.5; } },
+    apply: (g) => {
+      const lvl = g.upgrades.squadron?.level ?? 0;
+      if (lvl > 0) {
+        g.dps += g.unicornCount * 1.5;
+      }
+    } },
 ];
 
 function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
