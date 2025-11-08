@@ -1,4 +1,5 @@
 import { Beam } from './Beam'
+import BeamGraphic from '../display/BeamGraphic'
 
 export class BeamPool {
   private pool: Beam[] = []
@@ -6,6 +7,7 @@ export class BeamPool {
 
   alloc(): Beam {
     const b = this.pool.pop() ?? new Beam()
+    b.reset()
     return b
   }
 
@@ -17,10 +19,25 @@ export class BeamPool {
     this.pool.push(beam)
   }
 
-  spawn(duration?: number): Beam {
+  spawn(duration?: number, opts?: { app?: any; pixiOpts?: any }): Beam {
     const beam = this.alloc()
     this.active.add(beam)
-    beam.play({ duration: duration ?? 0, onFinish: () => this.release(beam) })
+
+    if (opts && opts.app && (globalThis as any).PIXI && (globalThis as any).PIXI.Graphics) {
+      // Allocate a Graphics from the display pool and hand it to the Beam via pixiOpts
+      try {
+        const PIXI = (globalThis as any).PIXI
+        const gfx = (BeamGraphic as any).alloc(PIXI)
+        const pixiOpts = Object.assign({}, opts.pixiOpts || {}, { existingGraphic: gfx })
+        beam.play({ duration: duration ?? 0, onFinish: () => this.release(beam), app: opts.app, pixiOpts })
+      } catch (e) {
+        // Fallback: just play without preallocated graphic
+        beam.play({ duration: duration ?? 0, onFinish: () => this.release(beam) })
+      }
+    } else {
+      beam.play({ duration: duration ?? 0, onFinish: () => this.release(beam) })
+    }
+
     return beam
   }
 

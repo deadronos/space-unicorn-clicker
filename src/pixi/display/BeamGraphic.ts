@@ -33,7 +33,11 @@ export default class BeamGraphic {
     if (!PIXI || !PIXI.Graphics) return
 
     try {
-      this.graphics = (BeamGraphic as any).alloc(PIXI)
+      if (opts && opts.existingGraphic) {
+        this.graphics = opts.existingGraphic
+      } else {
+        this.graphics = (BeamGraphic as any).alloc(PIXI)
+      }
 
       try {
         // reset and draw

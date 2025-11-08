@@ -30,7 +30,11 @@ export default class ImpactGraphic {
     if (!PIXI || !PIXI.Graphics) return
 
     try {
-      this.graphics = (ImpactGraphic as any).alloc(PIXI)
+      if (opts && opts.existingGraphic) {
+        this.graphics = opts.existingGraphic
+      } else {
+        this.graphics = (ImpactGraphic as any).alloc(PIXI)
+      }
 
       try {
         if (typeof this.graphics.clear === 'function') this.graphics.clear()
