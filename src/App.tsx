@@ -1,5 +1,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import PixiStage from "./pixi/PixiStage";
+import { BeamPool } from "./pixi/effects/BeamPool";
+import { ImpactParticles } from "./pixi/effects/ImpactParticles";
+import { DamageNumberPool } from "./pixi/effects/DamageNumbers";
 
 const UNICORN_IMG = (import.meta as any).env?.BASE_URL ? `${(import.meta as any).env.BASE_URL}unicorn.jpg` : "/unicorn.jpg";
 
@@ -193,6 +197,19 @@ export default function App() {
   const unicornRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lastAutoBeam = useRef<number>(Date.now());
   const lastClickTime = useRef<number>(0);
+  const pixiRef = useRef<any>(null);
+  const beamPoolRef = useRef<BeamPool | null>(null);
+  const impactPoolRef = useRef<ImpactParticles | null>(null);
+  const damagePoolRef = useRef<DamageNumberPool | null>(null);
+
+  useEffect(() => {
+    beamPoolRef.current = new BeamPool();
+    impactPoolRef.current = new ImpactParticles();
+    damagePoolRef.current = new DamageNumberPool();
+    return () => {
+      // no-op cleanup for pools
+    };
+  }, []);
 
   const [game, setGame] = useState<GameSnapshot>(() => {
     const saved = loadState();
@@ -242,6 +259,27 @@ export default function App() {
       { id: ++beamId.current, start: now, duration, crit, unicornIndex, startX: x, startY: y },
     ]);
     setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
+    try {
+      // pool logic (game-logic level)
+      if (beamPoolRef.current) {
+        beamPoolRef.current.spawn(duration);
+      }
+
+      // Spawn Pixi visual (convert percent -> pixel coords)
+      const container = clickZoneRef.current;
+      const pixi = pixiRef.current;
+      if (pixi && container) {
+        const rect = container.getBoundingClientRect();
+        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+        const startXpx = (x / 100) * rect.width * dpr;
+        const startYpx = (y / 100) * rect.height * dpr;
+        const endXpx = rect.width * 0.85 * dpr;
+        const endYpx = rect.height * 0.5 * dpr;
+        pixi.spawnBeam({ x0: startXpx, y0: startYpx, x1: endXpx, y1: endYpx, color: crit ? '#fbbf24' : '#60a5fa', width: crit ? 6 : 4, duration });
+      }
+    } catch (e) {
+      // swallow visual errors
+    }
   }, [getUnicornHornPosition]);
 
   const spawnHornBeams = useCallback((crit: boolean, count: number) => {
@@ -342,6 +380,22 @@ export default function App() {
       }
       
       setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: dmg, x, y, start: now, crit: isCrit }]);
+      try {
+        if (damagePoolRef.current) {
+          damagePoolRef.current.spawn(dmg, 1000);
+        }
+        const container = clickZoneRef.current;
+        const pixi = pixiRef.current;
+        if (pixi && container) {
+          const rect = container.getBoundingClientRect();
+          const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+          const px = (x / 100) * rect.width * dpr;
+          const py = (y / 100) * rect.height * dpr;
+          pixi.spawnImpact({ x: px, y: py, r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' });
+        }
+      } catch (e) {
+        // swallow
+      }
       if (shipDestroyed) {
         setExplosions((exs) => [...exs, { id: ++explosionId.current, start: now }]);
       }
@@ -510,47 +564,18 @@ export default function App() {
                   <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
               </div>
-              <div className="absolute inset-0 pointer-events-none z-40">
-                {beams.map((b) => (
-                  <BeamVisual
-                    key={b.id}
-                    crit={!!b.crit}
-                    unicornIndex={b.unicornIndex ?? 0}
-                    startX={b.startX}
-                    startY={b.startY}
-                  />
-                ))}
-                {sparks.map((s) => (<ImpactSparks key={s.id} duration={s.duration} />))}
-                {damageNumbers.map((dn) => (
-                  <div key={dn.id} className="absolute pointer-events-none font-bold text-2xl" 
+              <PixiStage ref={pixiRef} className="absolute inset-0 pointer-events-none z-40" style={{ width: '100%', height: '100%' }} />
+              {unicornSpawnNotifications.map((usn) => (
+                <div key={usn.id} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                  <div className="text-4xl font-bold text-purple-400" 
                     style={{ 
-                      left: `${dn.x}%`, 
-                      top: `${dn.y}%`, 
-                      color: dn.crit ? '#fbbf24' : '#60a5fa',
-                      textShadow: '0 0 8px rgba(0,0,0,0.8)',
-                      animation: 'damageFloat 1s ease-out forwards'
+                      textShadow: '0 0 20px rgba(192,132,252,0.8), 0 0 40px rgba(192,132,252,0.5)',
+                      animation: 'unicornSpawn 2s ease-out forwards'
                     }}>
-                    {dn.crit ? 'CRIT! ' : ''}{fmt(dn.value)}
+                    🦄 NEW UNICORN! 🦄
                   </div>
-                ))}
-                {explosions.map((ex) => (
-                  <div key={ex.id} className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24 pointer-events-none">
-                    <div className="w-full h-full rounded-full bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 opacity-80" 
-                      style={{ animation: 'explosion 0.8s ease-out forwards' }} />
-                  </div>
-                ))}
-                {unicornSpawnNotifications.map((usn) => (
-                  <div key={usn.id} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                    <div className="text-4xl font-bold text-purple-400" 
-                      style={{ 
-                        textShadow: '0 0 20px rgba(192,132,252,0.8), 0 0 40px rgba(192,132,252,0.5)',
-                        animation: 'unicornSpawn 2s ease-out forwards'
-                      }}>
-                      🦄 NEW UNICORN! 🦄
-                    </div>
-                  </div>
-                ))}
-              </div>
+                </div>
+              ))}
 
               <div className="text-center relative z-10">
                 <div className="text-5xl">⚡️🦄⚡️</div>
