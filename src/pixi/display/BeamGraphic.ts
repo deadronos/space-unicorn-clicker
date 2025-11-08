@@ -3,24 +3,49 @@ export default class BeamGraphic {
   app: any
   graphics: any
 
+  private static _pool: any[] = []
+
+  static alloc(PIXI: any) {
+    if (this._pool.length) return this._pool.pop()
+    return new PIXI.Graphics()
+  }
+
+  static release(g: any) {
+    try {
+      if (!g) return
+      if (typeof g.clear === 'function') g.clear()
+      try {
+        if (typeof g.removeChildren === 'function') g.removeChildren()
+      } catch (e) {}
+      // make invisible until reused
+      try {
+        g.visible = false
+      } catch (e) {}
+      this._pool.push(g)
+    } catch (e) {
+      // ignore
+    }
+  }
+
   constructor(app: any, opts?: any) {
     this.app = app
     const PIXI = (globalThis as any).PIXI
     if (!PIXI || !PIXI.Graphics) return
 
     try {
-      this.graphics = new PIXI.Graphics()
+      this.graphics = (BeamGraphic as any).alloc(PIXI)
+
       try {
+        // reset and draw
+        if (typeof this.graphics.clear === 'function') this.graphics.clear()
+        if (typeof this.graphics.lineStyle === 'function') this.graphics.lineStyle(opts?.width ?? 2, typeof opts?.color === 'number' ? opts.color : 0xff00ff)
         const w = (app && app.view && (app.view.width || app.view.clientWidth)) || 100
         const h = (app && app.view && (app.view.height || app.view.clientHeight)) || 100
         const x0 = opts?.x0 ?? Math.floor(w * 0.25)
         const y0 = opts?.y0 ?? Math.floor(h * 0.5)
         const x1 = opts?.x1 ?? Math.floor(w * 0.75)
         const y1 = opts?.y1 ?? Math.floor(h * 0.5)
-        const width = opts?.width ?? 2
-        const color = typeof opts?.color === 'number' ? opts.color : 0xff00ff
 
-        if (typeof this.graphics.lineStyle === 'function') this.graphics.lineStyle(width, color)
         if (typeof this.graphics.moveTo === 'function') this.graphics.moveTo(x0, y0)
         if (typeof this.graphics.lineTo === 'function') this.graphics.lineTo(x1, y1)
       } catch (e) {
@@ -42,11 +67,13 @@ export default class BeamGraphic {
   destroy() {
     try {
       if (!this.graphics) return
-      if (typeof this.graphics.clear === 'function') this.graphics.clear()
-      if (this.app && this.app.stage && typeof this.app.stage.removeChild === 'function') {
-        this.app.stage.removeChild(this.graphics)
-      }
-      if (typeof this.graphics.destroy === 'function') this.graphics.destroy()
+      try {
+        if (this.app && this.app.stage && typeof this.app.stage.removeChild === 'function') {
+          this.app.stage.removeChild(this.graphics)
+        }
+      } catch (e) {}
+      BeamGraphic.release(this.graphics)
+      this.graphics = null
     } catch (e) {
       // ignore
     }

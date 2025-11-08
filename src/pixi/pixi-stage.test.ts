@@ -2,7 +2,7 @@
 import React from 'react';
 import { expect, test } from 'vitest';
 import { createRoot } from 'react-dom/client';
-import { act } from 'react-dom/test-utils';
+import { act } from 'react';
 import PixiStage from './PixiStage';
 
 test('PixiStage mounts a canvas and exposes imperative methods', async () => {

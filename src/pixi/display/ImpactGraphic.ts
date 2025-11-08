@@ -3,14 +3,37 @@ export default class ImpactGraphic {
   app: any
   graphics: any
 
+  private static _pool: any[] = []
+
+  static alloc(PIXI: any) {
+    if (this._pool.length) return this._pool.pop()
+    return new PIXI.Graphics()
+  }
+
+  static release(g: any) {
+    try {
+      if (!g) return
+      if (typeof g.clear === 'function') g.clear()
+      try {
+        if (typeof g.removeChildren === 'function') g.removeChildren()
+      } catch (e) {}
+      try { g.visible = false } catch (e) {}
+      this._pool.push(g)
+    } catch (e) {
+      // ignore
+    }
+  }
+
   constructor(app: any, opts?: any) {
     this.app = app
     const PIXI = (globalThis as any).PIXI
     if (!PIXI || !PIXI.Graphics) return
 
     try {
-      this.graphics = new PIXI.Graphics()
+      this.graphics = (ImpactGraphic as any).alloc(PIXI)
+
       try {
+        if (typeof this.graphics.clear === 'function') this.graphics.clear()
         const w = (app && app.view && (app.view.width || app.view.clientWidth)) || 100
         const h = (app && app.view && (app.view.height || app.view.clientHeight)) || 100
         const cx = opts?.x ?? Math.floor(w / 2)
@@ -40,11 +63,13 @@ export default class ImpactGraphic {
   destroy() {
     try {
       if (!this.graphics) return
-      if (typeof this.graphics.clear === 'function') this.graphics.clear()
-      if (this.app && this.app.stage && typeof this.app.stage.removeChild === 'function') {
-        this.app.stage.removeChild(this.graphics)
-      }
-      if (typeof this.graphics.destroy === 'function') this.graphics.destroy()
+      try {
+        if (this.app && this.app.stage && typeof this.app.stage.removeChild === 'function') {
+          this.app.stage.removeChild(this.graphics)
+        }
+      } catch (e) {}
+      ImpactGraphic.release(this.graphics)
+      this.graphics = null
     } catch (e) {
       // ignore
     }
