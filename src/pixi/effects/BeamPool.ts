@@ -24,6 +24,7 @@ export class BeamPool {
     this.active.add(beam)
 
     if (opts && opts.app && (globalThis as any).PIXI && (globalThis as any).PIXI.Graphics) {
+      try { console.info && console.info('BeamPool: spawning PIXI beam', opts?.pixiOpts); } catch (e) {}
       // Allocate a Graphics from the display pool and hand it to the Beam via pixiOpts
       try {
         const PIXI = (globalThis as any).PIXI

@@ -266,11 +266,11 @@ export default function App() {
       if (beamPoolRef.current) {
         if (pixi && container) {
           const rect = container.getBoundingClientRect();
-          const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-          const startXpx = (x / 100) * rect.width * dpr;
-          const startYpx = (y / 100) * rect.height * dpr;
-          const endXpx = rect.width * 0.85 * dpr;
-          const endYpx = rect.height * 0.5 * dpr;
+          // Pixi's renderer handles resolution scaling; provide coordinates in CSS pixels
+          const startXpx = (x / 100) * rect.width;
+          const startYpx = (y / 100) * rect.height;
+          const endXpx = rect.width * 0.85;
+          const endYpx = rect.height * 0.5;
           const pixiApp = pixi.app ?? (pixi.getApp ? pixi.getApp() : undefined);
           beamPoolRef.current.spawn(duration, { app: pixiApp, pixiOpts: { x0: startXpx, y0: startYpx, x1: endXpx, y1: endYpx, color: crit ? '#fbbf24' : '#60a5fa', width: crit ? 6 : 4 } });
         } else {
@@ -386,9 +386,9 @@ export default function App() {
         if (damagePoolRef.current) {
           if (pixi && container) {
             const rect = container.getBoundingClientRect();
-            const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-            const px = (x / 100) * rect.width * dpr;
-            const py = (y / 100) * rect.height * dpr;
+            // Pixi takes CSS pixel coordinates; no DPR multiplication needed here
+            const px = (x / 100) * rect.width;
+            const py = (y / 100) * rect.height;
             const pixiApp = pixi.app ?? (pixi.getApp ? pixi.getApp() : undefined);
             damagePoolRef.current.spawn(dmg, 1000, { app: pixiApp, pixiOpts: { x: px, y: py, r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
             // spawn impact particles via central impact pool as well

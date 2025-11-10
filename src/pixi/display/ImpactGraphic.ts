@@ -38,6 +38,7 @@ export default class ImpactGraphic {
 
       try {
         if (typeof this.graphics.clear === 'function') this.graphics.clear()
+        try { this.graphics.visible = true } catch (e) {}
         const view = app && ((app.canvas as any) ?? (app.view as any))
         const w = (view && (view.width || view.clientWidth)) || 100
         const h = (view && (view.height || view.clientHeight)) || 100
@@ -46,9 +47,33 @@ export default class ImpactGraphic {
         const r = opts?.r ?? 6
         const color = typeof opts?.color === 'number' ? opts.color : 0xffff00
 
-        if (typeof this.graphics.beginFill === 'function') this.graphics.beginFill(color)
-        if (typeof this.graphics.drawCircle === 'function') this.graphics.drawCircle(cx, cy, r)
-        if (typeof this.graphics.endFill === 'function') this.graphics.endFill()
+        // Prefer modern Pixi v8 API if available: `fill` + `circle`.
+        if (typeof this.graphics.fill === 'function') {
+          try {
+            // v8: specify fill style as an object
+            try { this.graphics.fill({ color }); } catch (e) { /* best-effort */ }
+            if (typeof this.graphics.circle === 'function') {
+              this.graphics.circle(cx, cy, r)
+            } else if (typeof this.graphics.drawCircle === 'function') {
+              // older name fallback
+              this.graphics.drawCircle(cx, cy, r)
+            }
+            // Commit the filled shape for v8 path API.
+            if (typeof this.graphics.fill === 'function' && typeof this.graphics.endFill !== 'function') {
+              // nothing extra needed; path fill already committed
+            }
+          } catch (e) {
+            // fallback to legacy API if v8-style calls fail
+            if (typeof this.graphics.beginFill === 'function') this.graphics.beginFill(color)
+            if (typeof this.graphics.drawCircle === 'function') this.graphics.drawCircle(cx, cy, r)
+            if (typeof this.graphics.endFill === 'function') this.graphics.endFill()
+          }
+        } else {
+          // legacy PIXI: beginFill/drawCircle/endFill
+          if (typeof this.graphics.beginFill === 'function') this.graphics.beginFill(color)
+          if (typeof this.graphics.drawCircle === 'function') this.graphics.drawCircle(cx, cy, r)
+          if (typeof this.graphics.endFill === 'function') this.graphics.endFill()
+        }
       } catch (e) {
         // ignore drawing errors
       }

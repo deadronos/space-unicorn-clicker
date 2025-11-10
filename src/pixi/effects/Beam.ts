@@ -29,6 +29,7 @@ export class Beam {
       if (app && PIXI && PIXI.Graphics) {
         try {
           this.display = new BeamGraphic(app, opts?.pixiOpts ?? opts)
+          try { console.info && console.info('Beam: created PIXI display', { id: this.id, display: this.display }); } catch (e) {}
         } catch (e) {
           // ignore display failures
         }

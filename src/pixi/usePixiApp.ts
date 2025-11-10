@@ -35,7 +35,25 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
   if (PIXI && PIXI.Application) {
     try {
       const AppClass = PIXI.Application as any;
-      const defaultOptions = Object.assign({ width, height, resolution: dpr, antialias: true, backgroundAlpha: 0 }, options || {});
+
+      // Create a host DOM canvas that we'll hand to Pixi as the rendering
+      // target. By providing the `view` option we ensure Pixi uses a real
+      // HTMLCanvasElement we control (prevents OffscreenCanvas or other
+      // non-DOM views from hiding the stage in the layout).
+      let hostCanvas: HTMLCanvasElement | undefined;
+      if (typeof document !== 'undefined' && container) {
+        try {
+          hostCanvas = document.createElement('canvas');
+          hostCanvas.width = Math.max(1, Math.floor(width * dpr));
+          hostCanvas.height = Math.max(1, Math.floor(height * dpr));
+          try { hostCanvas.style.position = 'absolute'; hostCanvas.style.left = '0'; hostCanvas.style.top = '0'; hostCanvas.style.width = '100%'; hostCanvas.style.height = '100%'; hostCanvas.style.pointerEvents = 'none'; hostCanvas.style.background = 'transparent'; hostCanvas.style.zIndex = '0'; } catch (e) {}
+          try { if (container) container.appendChild(hostCanvas); } catch (e) {}
+        } catch (e) {
+          hostCanvas = undefined;
+        }
+      }
+
+      const defaultOptions = Object.assign({ width, height, resolution: dpr, antialias: true, backgroundAlpha: 0, view: hostCanvas }, options || {});
 
       // If the Application prototype exposes `init`, use the new async init flow.
       // However, avoid using the async init path while running in test/jsdom
@@ -62,6 +80,54 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
         const canvasEl = (app as any).canvas ?? (app as any).view;
         try { if (canvasEl) (canvasEl as any).__pixiApp = app; } catch (e) {}
         try { if (container && canvasEl) container.appendChild(canvasEl as unknown as Node); } catch (e) {}
+
+        // Ensure `app.canvas` points to a real HTMLCanvasElement the rest of
+        // the codebase can safely call `getContext('2d')` on. Some browser
+        // environments or renderer backends may expose an OffscreenCanvas or
+        // another view type that doesn't support 2D context; provide a
+        // fallback canvas so our canvas-based fallbacks won't crash.
+        try {
+          const actualView = (app as any).canvas ?? (app as any).view;
+          if (typeof document !== 'undefined') {
+            const isCanvas = actualView instanceof HTMLCanvasElement;
+            if (!isCanvas) {
+              const fallback = document.createElement('canvas');
+              fallback.width = Math.max(1, Math.floor(width * dpr));
+              fallback.height = Math.max(1, Math.floor(height * dpr));
+              try { fallback.style.width = `${width}px`; fallback.style.height = `${height}px`; } catch (e) {}
+              try { fallback.style.position = 'absolute'; fallback.style.left = '0'; fallback.style.top = '0'; fallback.style.pointerEvents = 'none'; fallback.style.background = 'transparent'; fallback.style.zIndex = '-1'; } catch (e) {}
+              // Ensure the container can host absolutely-positioned children
+              try {
+                const cs = window.getComputedStyle(container);
+                if (cs && cs.position === 'static') container.style.position = 'relative';
+              } catch (e) {}
+
+              // Insert the fallback behind the Pixi view if possible, otherwise append
+              try {
+                const maybeView = (app as any).view as any;
+                if (maybeView && container && (maybeView as Node).parentNode === container) {
+                  try { container.insertBefore(fallback, maybeView as Node); } catch (e) { container.appendChild(fallback); }
+                } else if (container) {
+                  container.appendChild(fallback);
+                }
+              } catch (e) {
+                try { if (container) container.appendChild(fallback); } catch (er) {}
+              }
+
+              try { (app as any).canvas = fallback; } catch (e) {}
+              try { console.warn('createPixiApp: app.view is not an HTMLCanvasElement — attached fallback canvas for 2D fallbacks.', actualView); } catch (e) {}
+              try {
+                const viewType = actualView && actualView.constructor && actualView.constructor.name ? actualView.constructor.name : typeof actualView;
+                const rendererType = (app && app.renderer && (app.renderer.type ?? app.renderer.constructor?.name)) || 'unknown';
+                console.info('createPixiApp: view/renderer info', { viewType, rendererType, canvasFallback: true, containerWidth: container?.clientWidth, containerHeight: container?.clientHeight });
+              } catch (e) {}
+            } else {
+              try { (app as any).canvas = actualView; } catch (e) {}
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
       } catch (e) {}
 
       // Provide a safe resize helper that updates resolution and renderer size

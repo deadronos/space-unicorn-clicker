@@ -42,12 +42,26 @@ export default class BeamGraphic {
       try {
         // reset and draw
         if (typeof this.graphics.clear === 'function') this.graphics.clear()
+        // ensure graphic is visible when reused from pool
+        try { this.graphics.visible = true } catch (e) {}
+
+        // Determine stroke color (support hex string like '#60a5fa')
+        let colorNum: number | undefined = undefined
+        if (typeof opts?.color === 'number') colorNum = opts.color
+        else if (typeof opts?.color === 'string' && /^#?[0-9a-fA-F]{6}$/.test(opts.color)) {
+          const hex = opts.color.replace('#', '')
+          try { colorNum = parseInt(hex, 16) } catch (e) { colorNum = undefined }
+        }
+        if (typeof colorNum === 'undefined') colorNum = 0xffffff
+
         // Prefer the newer setStrokeStyle API if available (PIXI v8+); fall back
-        // to the older lineStyle when necessary.
+        // to the older lineStyle when necessary. Always attempt to set a color
+        // to avoid invisible lines on dark backgrounds.
         if (typeof this.graphics.setStrokeStyle === 'function') {
-          try { this.graphics.setStrokeStyle(opts?.width ?? 2); } catch (e) {}
-        } else if (typeof this.graphics.lineStyle === 'function') {
-          try { this.graphics.lineStyle(opts?.width ?? 2, typeof opts?.color === 'number' ? opts.color : 0xff00ff); } catch (e) {}
+          try { this.graphics.setStrokeStyle({ width: opts?.width ?? 2, color: colorNum, cap: 'round', join: 'round', alignment: 0.5 }); } catch (e) {}
+        }
+        if (typeof this.graphics.lineStyle === 'function') {
+          try { this.graphics.lineStyle(opts?.width ?? 2, colorNum); } catch (e) {}
         }
 
         const view = app && ((app.canvas as any) ?? (app.view as any))
@@ -60,6 +74,8 @@ export default class BeamGraphic {
 
         if (typeof this.graphics.moveTo === 'function') this.graphics.moveTo(x0, y0)
         if (typeof this.graphics.lineTo === 'function') this.graphics.lineTo(x1, y1)
+        // Commit the stroke for Pixi v8 path API
+        if (typeof this.graphics.stroke === 'function') this.graphics.stroke()
       } catch (e) {
         // drawing best-effort
       }
