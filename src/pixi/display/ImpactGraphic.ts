@@ -38,8 +38,9 @@ export default class ImpactGraphic {
 
       try {
         if (typeof this.graphics.clear === 'function') this.graphics.clear()
-        const w = (app && app.view && (app.view.width || app.view.clientWidth)) || 100
-        const h = (app && app.view && (app.view.height || app.view.clientHeight)) || 100
+        const view = app && ((app.canvas as any) ?? (app.view as any))
+        const w = (view && (view.width || view.clientWidth)) || 100
+        const h = (view && (view.height || view.clientHeight)) || 100
         const cx = opts?.x ?? Math.floor(w / 2)
         const cy = opts?.y ?? Math.floor(h / 2)
         const r = opts?.r ?? 6

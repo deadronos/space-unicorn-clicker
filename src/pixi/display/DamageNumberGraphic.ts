@@ -8,8 +8,13 @@ export default class DamageNumberGraphic {
   static alloc(PIXI: any) {
     if (this._pool.length) return this._pool.pop()
     try {
-      const t = new PIXI.Text('', { fill: 0xffffff, fontSize: 14 })
-      return t
+      // Prefer the newer Text API (PIXI v8+): `new Text({ text, style })`.
+      try {
+        return new PIXI.Text({ text: '', style: { fill: 0xffffff, fontSize: 14 } })
+      } catch (e) {
+        // Fallback to the legacy constructor signature
+        return new PIXI.Text('', { fill: 0xffffff, fontSize: 14 })
+      }
     } catch (e) {
       return null
     }

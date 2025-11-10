@@ -18,55 +18,60 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
   const timersRef = useRef<Set<number>>(new Set());
 
   useLayoutEffect(() => {
+    let mounted = true;
     const container = containerRef.current;
     if (!container) return;
 
-    const app = createPixiApp(container);
-    appRef.current = app;
+    let updateSize: () => void = () => {};
 
-    // handle basic DPR / sizing
-    try {
-      const canvas = (app as any).view as HTMLCanvasElement;
-      const updateSize = () => {
-        try {
-          const dpr = (typeof window !== 'undefined' && (window.devicePixelRatio || 1)) || 1;
-          const w = container.clientWidth || 100;
-          const h = container.clientHeight || 100;
-          canvas.width = Math.max(1, Math.floor(w * dpr));
-          canvas.height = Math.max(1, Math.floor(h * dpr));
-          canvas.style.width = `${w}px`;
-          canvas.style.height = `${h}px`;
-        } catch (e) {
-          // ignore
-        }
-      };
+    (async () => {
+      const app = await createPixiApp(container);
+      if (!mounted) {
+        try { app.destroy?.(); } catch (e) {}
+        return;
+      }
+      appRef.current = app;
 
-      updateSize();
-      window.addEventListener('resize', updateSize);
-
-      return () => {
-        window.removeEventListener('resize', updateSize);
-        try {
+      // handle basic DPR / sizing
+      try {
+        const canvas = ((app as any).canvas ?? (app as any).view) as HTMLCanvasElement;
+        updateSize = () => {
           try {
-            timersRef.current.forEach((id) => clearTimeout(id));
-            timersRef.current.clear();
-          } catch (err) {}
-          app.destroy?.();
-        } catch (e) {
-          // ignore
-        }
-      };
-    } catch (e) {
+            const dpr = (typeof window !== 'undefined' && (window.devicePixelRatio || 1)) || 1;
+            const w = container.clientWidth || 100;
+            const h = container.clientHeight || 100;
+            canvas.width = Math.max(1, Math.floor(w * dpr));
+            canvas.height = Math.max(1, Math.floor(h * dpr));
+            try { canvas.style.width = `${w}px`; canvas.style.height = `${h}px`; } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
+        };
+
+        updateSize();
+        window.addEventListener('resize', updateSize);
+      } catch (e) {
+        try {
+          timersRef.current.forEach((id) => clearTimeout(id));
+          timersRef.current.clear();
+        } catch (err) {}
+        try { appRef.current?.destroy?.(); } catch (er) {}
+      }
+    })();
+
+    return () => {
+      mounted = false;
       try {
         try {
           timersRef.current.forEach((id) => clearTimeout(id));
           timersRef.current.clear();
         } catch (err) {}
-        app.destroy?.();
-      } catch (er) {
+        try { window.removeEventListener('resize', updateSize); } catch (e) {}
+        try { appRef.current?.destroy?.(); } catch (e) {}
+      } catch (e) {
         // ignore
       }
-    }
+    };
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -92,7 +97,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
         }
       }
 
-      const canvas = (app as any).view as HTMLCanvasElement;
+      const canvas = ((app as any).canvas ?? (app as any).view) as HTMLCanvasElement;
       try {
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
         if (ctx) {
@@ -132,7 +137,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
         }
       }
 
-      const canvas = (app as any).view as HTMLCanvasElement;
+      const canvas = ((app as any).canvas ?? (app as any).view) as HTMLCanvasElement;
       try {
         const ctx = canvas.getContext ? canvas.getContext('2d') : null;
         if (ctx) {

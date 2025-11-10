@@ -42,9 +42,17 @@ export default class BeamGraphic {
       try {
         // reset and draw
         if (typeof this.graphics.clear === 'function') this.graphics.clear()
-        if (typeof this.graphics.lineStyle === 'function') this.graphics.lineStyle(opts?.width ?? 2, typeof opts?.color === 'number' ? opts.color : 0xff00ff)
-        const w = (app && app.view && (app.view.width || app.view.clientWidth)) || 100
-        const h = (app && app.view && (app.view.height || app.view.clientHeight)) || 100
+        // Prefer the newer setStrokeStyle API if available (PIXI v8+); fall back
+        // to the older lineStyle when necessary.
+        if (typeof this.graphics.setStrokeStyle === 'function') {
+          try { this.graphics.setStrokeStyle(opts?.width ?? 2); } catch (e) {}
+        } else if (typeof this.graphics.lineStyle === 'function') {
+          try { this.graphics.lineStyle(opts?.width ?? 2, typeof opts?.color === 'number' ? opts.color : 0xff00ff); } catch (e) {}
+        }
+
+        const view = app && ((app.canvas as any) ?? (app.view as any))
+        const w = (view && (view.width || view.clientWidth)) || 100
+        const h = (view && (view.height || view.clientHeight)) || 100
         const x0 = opts?.x0 ?? Math.floor(w * 0.25)
         const y0 = opts?.y0 ?? Math.floor(h * 0.5)
         const x1 = opts?.x1 ?? Math.floor(w * 0.75)
