@@ -1,6 +1,7 @@
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css";
+@import "tailwindcss/preflight.css";
+@import "tailwindcss/utilities.css";
 
+/* Keep app layout baseline: ensure root fills the viewport. */
 html, body, #root { height: 100%; }

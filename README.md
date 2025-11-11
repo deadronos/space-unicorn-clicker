@@ -1,4 +1,4 @@
-
+npm ru
 # 🦄 Space Unicorn Clicker (React + TS + Vite + Tailwind)
 
 Minimal idle/clicker MVP where a cosmic unicorn raids battleships with a glowing laser horn.

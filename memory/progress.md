@@ -1,5 +1,15 @@
 # Progress Log
 
+## 2025-10-27
+
+### Unicorn Horn Beams (TASK006)
+
+- Documented TASK006 and refreshed `memory/tasks/_index.md` before making code changes.
+- Reworked the beam rendering logic to compute each unicorn's horn location and reuse those positions for manual and auto-fired beams.
+- Ensured the starfield background/pseudo layers sit behind the beam layer and gave the lasers their own z-order so the horns-to-ship beams are visible again.
+- `npm run build` now succeeds locally (tsc + Vite build) after ensuring no clipping layers block the beam SVG surfaces.
+- Added a dedicated beam overlay (`pointer-events-none` + `z-40`) so beams, sparks, and damage feedback render on top of the background, guaranteeing the lasers are visible even when text overlays appear.
+
 ## 2025-10-26
 
 ### Unicorn Squadron Feature ✅ (TASK005)
