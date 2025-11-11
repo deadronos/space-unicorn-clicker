@@ -7,6 +7,7 @@ export class Beam {
   private _timer: ReturnType<typeof setTimeout> | null = null
   private _onFinish?: () => void
   public display: any = null
+  private _startTs: number | null = null
 
   constructor() {
     this.id = Beam._nextId++
@@ -16,6 +17,11 @@ export class Beam {
     const duration = opts?.duration ?? 0
     this._onFinish = opts?.onFinish
     this.active = true
+
+    try {
+      this._startTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+      try { console.info && console.info('Beam.play start', { id: this.id, duration }) } catch (e) {}
+    } catch (e) {}
 
     if (this._timer) {
       clearTimeout(this._timer)
@@ -28,7 +34,11 @@ export class Beam {
       const PIXI = (globalThis as any).PIXI
       if (app && PIXI && PIXI.Graphics) {
         try {
-          this.display = new BeamGraphic(app, opts?.pixiOpts ?? opts)
+          // Ensure the duration is available to the Pixi display so it can
+          // perform its own alpha fade animation. Prefer duration in
+          // opts.pixiOpts but fall back to the top-level duration.
+          const displayOpts = Object.assign({}, opts?.pixiOpts || opts || {}, { duration })
+          this.display = new BeamGraphic(app, displayOpts)
           try { console.info && console.info('Beam: created PIXI display', { id: this.id, display: this.display }); } catch (e) {}
         } catch (e) {
           // ignore display failures
@@ -48,6 +58,13 @@ export class Beam {
       clearTimeout(this._timer)
       this._timer = null
     }
+
+    try {
+      const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+      if (this._startTs) {
+        try { console.info && console.info('Beam.finish elapsed', { id: this.id, elapsed: Math.round(now - this._startTs) }) } catch (e) {}
+      }
+    } catch (e) {}
 
     // destroy any attached display
     try {

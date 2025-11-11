@@ -83,7 +83,8 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
       if (typeof (globalThis as any).PIXI !== 'undefined' && (globalThis as any).PIXI.Graphics) {
         try {
           const g = new BeamGraphic(app, opts);
-          const duration = opts?.duration ?? 300;
+          // Shorter default duration for spawned beams so they feel snappier
+          const duration = opts?.duration ?? 200;
           const t = window.setTimeout(() => {
             try {
               g.destroy();
@@ -123,7 +124,8 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
       if (typeof (globalThis as any).PIXI !== 'undefined' && (globalThis as any).PIXI.Graphics) {
         try {
           const g = new ImpactGraphic(app, opts);
-          const duration = opts?.duration ?? 300;
+          // Shorter default duration for impact fallback visuals
+          const duration = opts?.duration ?? 200;
           const t = window.setTimeout(() => {
             try {
               g.destroy();

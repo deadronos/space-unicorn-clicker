@@ -40,8 +40,12 @@ export default class ImpactGraphic {
         if (typeof this.graphics.clear === 'function') this.graphics.clear()
         try { this.graphics.visible = true } catch (e) {}
         const view = app && ((app.canvas as any) ?? (app.view as any))
-        const w = (view && (view.width || view.clientWidth)) || 100
-        const h = (view && (view.height || view.clientHeight)) || 100
+        // Prefer CSS pixel sizes (clientWidth/clientHeight) for coordinate calculations
+        // so inputs expressed in CSS pixels (from getBoundingClientRect) match Pixi's
+        // logical coordinate space. Fall back to the canvas width/height properties
+        // (device pixels) when client sizes are unavailable.
+        const w = (view && (view.clientWidth || view.width)) || 100
+        const h = (view && (view.clientHeight || view.height)) || 100
         const cx = opts?.x ?? Math.floor(w / 2)
         const cy = opts?.y ?? Math.floor(h / 2)
         const r = opts?.r ?? 6

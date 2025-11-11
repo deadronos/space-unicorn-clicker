@@ -2,6 +2,8 @@
 export default class BeamGraphic {
   app: any
   graphics: any
+  private _fadeTick: any = null
+  private _rafId: number | null = null
 
   private static _pool: any[] = []
 
@@ -17,6 +19,9 @@ export default class BeamGraphic {
       try {
         if (typeof g.removeChildren === 'function') g.removeChildren()
       } catch (e) {}
+      // reset alpha so pooled graphics don't stay faded
+      try { g.alpha = 1 } catch (e) {}
+      try { if ((g as any).__beamDebug) delete (g as any).__beamDebug } catch (e) {}
       // make invisible until reused
       try {
         g.visible = false
@@ -38,6 +43,8 @@ export default class BeamGraphic {
       } else {
         this.graphics = (BeamGraphic as any).alloc(PIXI)
       }
+
+      
 
       try {
         // reset and draw
@@ -65,17 +72,70 @@ export default class BeamGraphic {
         }
 
         const view = app && ((app.canvas as any) ?? (app.view as any))
-        const w = (view && (view.width || view.clientWidth)) || 100
-        const h = (view && (view.height || view.clientHeight)) || 100
+        // Prefer CSS pixel sizes (clientWidth/clientHeight) for coordinate calculations
+        // so inputs expressed in CSS pixels (from getBoundingClientRect) match Pixi's
+        // logical coordinate space. Fall back to the canvas width/height properties
+        // (device pixels) when client sizes are unavailable.
+        const w = (view && (view.clientWidth || view.width)) || 100
+        const h = (view && (view.clientHeight || view.height)) || 100
         const x0 = opts?.x0 ?? Math.floor(w * 0.25)
         const y0 = opts?.y0 ?? Math.floor(h * 0.5)
         const x1 = opts?.x1 ?? Math.floor(w * 0.75)
         const y1 = opts?.y1 ?? Math.floor(h * 0.5)
 
+        try { console.info && console.info('BeamGraphic: coords',{ x0, y0, x1, y1, viewClientWidth: view && (view.clientWidth || view.width), viewClientHeight: view && (view.clientHeight || view.height), opts }); } catch (e) {}
+        try { if (this.graphics) (this.graphics as any).__beamDebug = { x0, y0, x1, y1, w, h, opts }; } catch (e) {}
+
         if (typeof this.graphics.moveTo === 'function') this.graphics.moveTo(x0, y0)
         if (typeof this.graphics.lineTo === 'function') this.graphics.lineTo(x1, y1)
         // Commit the stroke for Pixi v8 path API
         if (typeof this.graphics.stroke === 'function') this.graphics.stroke()
+
+        // Ensure alpha is reset when drawing and start a fade animation
+        try { this.graphics.alpha = 1 } catch (e) {}
+        const durationMs = opts?.duration ?? 0
+        try {
+          if (durationMs > 0) {
+            const ticker = this.app && this.app.ticker
+            const start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+            const tick = () => {
+              try {
+                const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+                const elapsed = now - start
+                const t = Math.min(1, elapsed / durationMs)
+                try { this.graphics.alpha = 1 - t } catch (e) {}
+                if (t >= 1) {
+                  try { if (ticker && typeof ticker.remove === 'function') ticker.remove(tick) } catch (e) {}
+                  this._fadeTick = null
+                }
+              } catch (e) {
+                // ignore per-frame errors
+              }
+            }
+
+            if (ticker && typeof ticker.add === 'function') {
+              try { ticker.add(tick) } catch (e) {}
+              this._fadeTick = tick
+            } else if (typeof requestAnimationFrame === 'function') {
+              const loop = () => {
+                try {
+                  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+                  const elapsed = now - start
+                  const t = Math.min(1, elapsed / durationMs)
+                  try { this.graphics.alpha = 1 - t } catch (e) {}
+                  if (t >= 1) {
+                    this._rafId = null
+                    return
+                  }
+                } catch (e) {}
+                this._rafId = requestAnimationFrame(loop)
+              }
+              this._rafId = requestAnimationFrame(loop)
+            }
+          }
+        } catch (e) {
+          // ignore animation setup errors
+        }
       } catch (e) {
         // drawing best-effort
       }
@@ -96,6 +156,20 @@ export default class BeamGraphic {
     try {
       if (!this.graphics) return
       try {
+        // clean up any running animation callbacks
+        try {
+          if (this._fadeTick && this.app && this.app.ticker && typeof this.app.ticker.remove === 'function') {
+            try { this.app.ticker.remove(this._fadeTick) } catch (e) {}
+            this._fadeTick = null
+          }
+        } catch (e) {}
+        try {
+          if (this._rafId) {
+            try { cancelAnimationFrame(this._rafId) } catch (e) {}
+            this._rafId = null
+          }
+        } catch (e) {}
+
         if (this.app && this.app.stage && typeof this.app.stage.removeChild === 'function') {
           this.app.stage.removeChild(this.graphics)
         }

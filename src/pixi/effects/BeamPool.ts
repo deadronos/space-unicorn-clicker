@@ -24,12 +24,12 @@ export class BeamPool {
     this.active.add(beam)
 
     if (opts && opts.app && (globalThis as any).PIXI && (globalThis as any).PIXI.Graphics) {
-      try { console.info && console.info('BeamPool: spawning PIXI beam', opts?.pixiOpts); } catch (e) {}
       // Allocate a Graphics from the display pool and hand it to the Beam via pixiOpts
       try {
         const PIXI = (globalThis as any).PIXI
         const gfx = (BeamGraphic as any).alloc(PIXI)
-        const pixiOpts = Object.assign({}, opts.pixiOpts || {}, { existingGraphic: gfx })
+        const pixiOpts = Object.assign({}, opts.pixiOpts || {}, { existingGraphic: gfx, duration: duration ?? 0 })
+        try { console.info && console.info('BeamPool: spawning PIXI beam with pixiOpts', pixiOpts); } catch (e) {}
         beam.play({ duration: duration ?? 0, onFinish: () => this.release(beam), app: opts.app, pixiOpts })
       } catch (e) {
         // Fallback: just play without preallocated graphic

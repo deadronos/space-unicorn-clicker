@@ -253,7 +253,8 @@ export default function App() {
   const queueBeam = useCallback((unicornIndex: number, crit: boolean) => {
     const now = Date.now();
     const { x, y } = getUnicornHornPosition(unicornIndex);
-    const duration = crit ? 700 : 600;
+    // Shorten beam TTL so beams feel snappier. Crits last slightly longer.
+    const duration = crit ? 320 : 200;
     setBeams((prev) => [
       ...prev,
       { id: ++beamId.current, start: now, duration, crit, unicornIndex, startX: x, startY: y },

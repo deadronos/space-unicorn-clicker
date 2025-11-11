@@ -46,8 +46,21 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
           hostCanvas = document.createElement('canvas');
           hostCanvas.width = Math.max(1, Math.floor(width * dpr));
           hostCanvas.height = Math.max(1, Math.floor(height * dpr));
-          try { hostCanvas.style.position = 'absolute'; hostCanvas.style.left = '0'; hostCanvas.style.top = '0'; hostCanvas.style.width = '100%'; hostCanvas.style.height = '100%'; hostCanvas.style.pointerEvents = 'none'; hostCanvas.style.background = 'transparent'; hostCanvas.style.zIndex = '0'; } catch (e) {}
-          try { if (container) container.appendChild(hostCanvas); } catch (e) {}
+          try {
+            hostCanvas.style.position = 'absolute';
+            hostCanvas.style.left = '0';
+            hostCanvas.style.top = '0';
+            hostCanvas.style.width = '100%';
+            hostCanvas.style.height = '100%';
+            hostCanvas.style.pointerEvents = 'none';
+            hostCanvas.style.background = 'transparent';
+            hostCanvas.style.zIndex = '0';
+          } catch (e) {}
+          // NOTE: do NOT append the hostCanvas here. Append the actual
+          // app.view after Pixi has initialized so we avoid ending up with
+          // two canvases inside the same container (a temporary host plus
+          // the renderer's view). The code below will append the final
+          // canvas element returned by the Pixi Application.
         } catch (e) {
           hostCanvas = undefined;
         }
@@ -76,10 +89,27 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
         app = new AppClass(defaultOptions);
       }
 
-      try {
-        const canvasEl = (app as any).canvas ?? (app as any).view;
-        try { if (canvasEl) (canvasEl as any).__pixiApp = app; } catch (e) {}
-        try { if (container && canvasEl) container.appendChild(canvasEl as unknown as Node); } catch (e) {}
+        try {
+          const canvasEl = (app as any).canvas ?? (app as any).view;
+          try { if (canvasEl) (canvasEl as any).__pixiApp = app; } catch (e) {}
+          // Remove any existing canvas children in the container first to avoid
+          // having multiple stacked canvases (which causes coordinate/offset
+          // confusion). Only remove canvas elements that are direct children
+          // of the container.
+          try {
+            if (container) {
+              const existingCanvases = Array.from(container.querySelectorAll('canvas'));
+              existingCanvases.forEach((c) => {
+                try {
+                  if (c && c.parentNode === container) c.parentNode.removeChild(c);
+                } catch (e) {
+                  // ignore removal errors
+                }
+              });
+            }
+          } catch (e) {}
+
+          try { if (container && canvasEl) container.appendChild(canvasEl as unknown as Node); } catch (e) {}
 
         // Ensure `app.canvas` points to a real HTMLCanvasElement the rest of
         // the codebase can safely call `getContext('2d')` on. Some browser
