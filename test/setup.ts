@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom';
+
 // Try to use `canvas` (node-canvas) if available; otherwise provide a small stub
 // Provide a small stub for 2D contexts used by tests (avoid requiring node-canvas at test runtime)
 try {

@@ -17,6 +17,8 @@
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false
+    ,
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
   },
   "include": [
     "src"
