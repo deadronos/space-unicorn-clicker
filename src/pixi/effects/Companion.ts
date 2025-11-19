@@ -17,7 +17,7 @@ class CompanionGraphic extends PIXI.Graphics {
       innerStrength: 0,
       color: glowColor,
       quality: 0.2,
-    })];
+    }) as unknown as any];
   }
 }
 

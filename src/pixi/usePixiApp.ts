@@ -21,7 +21,7 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
   if (!isTestEnv && typeof (globalThis as any).PIXI === 'undefined' && typeof window !== 'undefined') {
     try {
       const m = await import('pixi.js');
-      try { (globalThis as any).PIXI = m; } catch (e) {}
+      try { (globalThis as any).PIXI = m; } catch (e) { }
     } catch (e) {
       // dynamic import failed — we'll fall back to the canvas shim below
     }
@@ -36,37 +36,7 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
     try {
       const AppClass = PIXI.Application as any;
 
-      // Create a host DOM canvas that we'll hand to Pixi as the rendering
-      // target. By providing the `view` option we ensure Pixi uses a real
-      // HTMLCanvasElement we control (prevents OffscreenCanvas or other
-      // non-DOM views from hiding the stage in the layout).
-      let hostCanvas: HTMLCanvasElement | undefined;
-      if (typeof document !== 'undefined' && container) {
-        try {
-          hostCanvas = document.createElement('canvas');
-          hostCanvas.width = Math.max(1, Math.floor(width * dpr));
-          hostCanvas.height = Math.max(1, Math.floor(height * dpr));
-          try {
-            hostCanvas.style.position = 'absolute';
-            hostCanvas.style.left = '0';
-            hostCanvas.style.top = '0';
-            hostCanvas.style.width = '100%';
-            hostCanvas.style.height = '100%';
-            hostCanvas.style.pointerEvents = 'none';
-            hostCanvas.style.background = 'transparent';
-            hostCanvas.style.zIndex = '0';
-          } catch (e) {}
-          // NOTE: do NOT append the hostCanvas here. Append the actual
-          // app.view after Pixi has initialized so we avoid ending up with
-          // two canvases inside the same container (a temporary host plus
-          // the renderer's view). The code below will append the final
-          // canvas element returned by the Pixi Application.
-        } catch (e) {
-          hostCanvas = undefined;
-        }
-      }
-
-      const defaultOptions = Object.assign({ width, height, resolution: dpr, antialias: true, backgroundAlpha: 0, view: hostCanvas }, options || {});
+      const defaultOptions = Object.assign({ width, height, resolution: dpr, antialias: true, backgroundAlpha: 0 }, options || {});
 
       // If the Application prototype exposes `init`, use the new async init flow.
       // However, avoid using the async init path while running in test/jsdom
@@ -89,27 +59,46 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
         app = new AppClass(defaultOptions);
       }
 
-        try {
-          const canvasEl = (app as any).canvas ?? (app as any).view;
-          try { if (canvasEl) (canvasEl as any).__pixiApp = app; } catch (e) {}
-          // Remove any existing canvas children in the container first to avoid
-          // having multiple stacked canvases (which causes coordinate/offset
-          // confusion). Only remove canvas elements that are direct children
-          // of the container.
-          try {
-            if (container) {
-              const existingCanvases = Array.from(container.querySelectorAll('canvas'));
-              existingCanvases.forEach((c) => {
-                try {
-                  if (c && c.parentNode === container) c.parentNode.removeChild(c);
-                } catch (e) {
-                  // ignore removal errors
-                }
-              });
-            }
-          } catch (e) {}
+      try {
+        const canvasEl = (app as any).canvas ?? (app as any).view;
+        try { if (canvasEl) (canvasEl as any).__pixiApp = app; } catch (e) { }
 
-          try { if (container && canvasEl) container.appendChild(canvasEl as unknown as Node); } catch (e) {}
+        // Ensure the canvas is styled correctly
+        if (canvasEl) {
+          try {
+            canvasEl.style.position = 'absolute';
+            canvasEl.style.left = '0';
+            canvasEl.style.top = '0';
+            canvasEl.style.width = '100%';
+            canvasEl.style.height = '100%';
+            canvasEl.style.pointerEvents = 'none';
+            canvasEl.style.background = 'transparent';
+            canvasEl.style.zIndex = '0';
+          } catch (e) { }
+        }
+
+        // Remove any existing canvas children in the container first to avoid
+        // having multiple stacked canvases (which causes coordinate/offset
+        // confusion). Only remove canvas elements that are direct children
+        // of the container.
+        try {
+          if (container) {
+            const existingCanvases = Array.from(container.querySelectorAll('canvas'));
+            existingCanvases.forEach((c) => {
+              try {
+                if (c && c.parentNode === container) c.parentNode.removeChild(c);
+              } catch (e) {
+                // ignore removal errors
+              }
+            });
+          }
+        } catch (e) { }
+
+        try {
+          if (container && canvasEl) {
+            container.appendChild(canvasEl as unknown as Node);
+          }
+        } catch (e) { }
 
         // Ensure `app.canvas` points to a real HTMLCanvasElement the rest of
         // the codebase can safely call `getContext('2d')` on. Some browser
@@ -124,13 +113,13 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
               const fallback = document.createElement('canvas');
               fallback.width = Math.max(1, Math.floor(width * dpr));
               fallback.height = Math.max(1, Math.floor(height * dpr));
-              try { fallback.style.width = `${width}px`; fallback.style.height = `${height}px`; } catch (e) {}
-              try { fallback.style.position = 'absolute'; fallback.style.left = '0'; fallback.style.top = '0'; fallback.style.pointerEvents = 'none'; fallback.style.background = 'transparent'; fallback.style.zIndex = '-1'; } catch (e) {}
+              try { fallback.style.width = `${width}px`; fallback.style.height = `${height}px`; } catch (e) { }
+              try { fallback.style.position = 'absolute'; fallback.style.left = '0'; fallback.style.top = '0'; fallback.style.pointerEvents = 'none'; fallback.style.background = 'transparent'; fallback.style.zIndex = '-1'; } catch (e) { }
               // Ensure the container can host absolutely-positioned children
               try {
                 const cs = window.getComputedStyle(container);
                 if (cs && cs.position === 'static') container.style.position = 'relative';
-              } catch (e) {}
+              } catch (e) { }
 
               // Insert the fallback behind the Pixi view if possible, otherwise append
               try {
@@ -141,24 +130,24 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
                   container.appendChild(fallback);
                 }
               } catch (e) {
-                try { if (container) container.appendChild(fallback); } catch (er) {}
+                try { if (container) container.appendChild(fallback); } catch (er) { }
               }
 
-              try { (app as any).canvas = fallback; } catch (e) {}
-              try { console.warn('createPixiApp: app.view is not an HTMLCanvasElement — attached fallback canvas for 2D fallbacks.', actualView); } catch (e) {}
+              try { (app as any).canvas = fallback; } catch (e) { }
+              try { console.warn('createPixiApp: app.view is not an HTMLCanvasElement — attached fallback canvas for 2D fallbacks.', actualView); } catch (e) { }
               try {
                 const viewType = actualView && actualView.constructor && actualView.constructor.name ? actualView.constructor.name : typeof actualView;
                 const rendererType = (app && app.renderer && (app.renderer.type ?? app.renderer.constructor?.name)) || 'unknown';
                 console.info('createPixiApp: view/renderer info', { viewType, rendererType, canvasFallback: true, containerWidth: container?.clientWidth, containerHeight: container?.clientHeight });
-              } catch (e) {}
+              } catch (e) { }
             } else {
-              try { (app as any).canvas = actualView; } catch (e) {}
+              try { (app as any).canvas = actualView; } catch (e) { }
             }
           }
         } catch (e) {
           // ignore
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // Provide a safe resize helper that updates resolution and renderer size
       (app as any)._pixiResize = () => {
@@ -173,7 +162,7 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
             const view = ((app as any).canvas ?? (app as any).view) as HTMLCanvasElement;
             view.width = Math.max(1, Math.floor(w * nowDpr));
             view.height = Math.max(1, Math.floor(h * nowDpr));
-            try { view.style.width = `${w}px`; view.style.height = `${h}px`; } catch (e) {}
+            try { view.style.width = `${w}px`; view.style.height = `${h}px`; } catch (e) { }
           }
         } catch (e) {
           // ignore
@@ -194,13 +183,15 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
   try {
     canvas.width = Math.max(1, Math.floor(width * dpr));
     canvas.height = Math.max(1, Math.floor(height * dpr));
-    try { canvas.style.width = `${width}px`; canvas.style.height = `${height}px`; } catch (e) {}
+    try { canvas.style.width = `${width}px`; canvas.style.height = `${height}px`; } catch (e) { }
   } catch (e) {
     // ignore
   }
 
   try {
-    if (container && canvas) container.appendChild(canvas as unknown as Node);
+    if (container && canvas) {
+      container.appendChild(canvas as unknown as Node);
+    }
   } catch (e) {
     // ignore append failures in unusual environments
   }
@@ -209,6 +200,15 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
     children: [],
     addChild(child: any) {
       this.children.push(child);
+    },
+    addChildAt(child: any, index: number) {
+      try {
+        if (typeof index !== 'number' || Number.isNaN(index)) index = this.children.length;
+        const idx = Math.max(0, Math.min(this.children.length, Math.floor(index)));
+        this.children.splice(idx, 0, child);
+      } catch (e) {
+        try { this.children.push(child); } catch (er) { }
+      }
     },
     removeChild(child: any) {
       const idx = this.children.indexOf(child);
@@ -219,7 +219,7 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
   const app: any = {
     view: canvas,
     canvas,
-    ticker: { autoStart: false, stop() {} },
+    ticker: { autoStart: false, stop() { } },
     stage,
     renderer: {
       resolution: dpr,
@@ -243,8 +243,8 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
 
   try {
     const el = (app as any).canvas ?? (app as any).view;
-    if (el) try { (el as any).__pixiApp = app; } catch (e) {}
-  } catch (e) {}
+    if (el) try { (el as any).__pixiApp = app; } catch (e) { }
+  } catch (e) { }
 
   return app;
 }
@@ -262,7 +262,7 @@ export function usePixiApp(containerRef: RefObject<HTMLElement>) {
     (async () => {
       const app = await createPixiApp(container);
       if (!mounted) {
-        try { app.destroy?.(); } catch (e) {}
+        try { app.destroy?.(); } catch (e) { }
         return;
       }
       appRef.current = app;

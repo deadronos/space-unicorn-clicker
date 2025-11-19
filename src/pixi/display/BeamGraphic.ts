@@ -18,14 +18,14 @@ export default class BeamGraphic {
       if (typeof g.clear === 'function') g.clear()
       try {
         if (typeof g.removeChildren === 'function') g.removeChildren()
-      } catch (e) {}
+      } catch (e) { }
       // reset alpha so pooled graphics don't stay faded
-      try { g.alpha = 1 } catch (e) {}
-      try { if ((g as any).__beamDebug) delete (g as any).__beamDebug } catch (e) {}
+      try { g.alpha = 1 } catch (e) { }
+      try { if ((g as any).__beamDebug) delete (g as any).__beamDebug } catch (e) { }
       // make invisible until reused
       try {
         g.visible = false
-      } catch (e) {}
+      } catch (e) { }
       this._pool.push(g)
     } catch (e) {
       // ignore
@@ -44,13 +44,13 @@ export default class BeamGraphic {
         this.graphics = (BeamGraphic as any).alloc(PIXI)
       }
 
-      
+
 
       try {
         // reset and draw
         if (typeof this.graphics.clear === 'function') this.graphics.clear()
         // ensure graphic is visible when reused from pool
-        try { this.graphics.visible = true } catch (e) {}
+        try { this.graphics.visible = true } catch (e) { }
 
         // Determine stroke color (support hex string like '#60a5fa')
         let colorNum: number | undefined = undefined
@@ -65,10 +65,10 @@ export default class BeamGraphic {
         // to the older lineStyle when necessary. Always attempt to set a color
         // to avoid invisible lines on dark backgrounds.
         if (typeof this.graphics.setStrokeStyle === 'function') {
-          try { this.graphics.setStrokeStyle({ width: opts?.width ?? 2, color: colorNum, cap: 'round', join: 'round', alignment: 0.5 }); } catch (e) {}
+          try { this.graphics.setStrokeStyle({ width: opts?.width ?? 2, color: colorNum, cap: 'round', join: 'round', alignment: 0.5 }); } catch (e) { }
         }
         if (typeof this.graphics.lineStyle === 'function') {
-          try { this.graphics.lineStyle(opts?.width ?? 2, colorNum); } catch (e) {}
+          try { this.graphics.lineStyle(opts?.width ?? 2, colorNum); } catch (e) { }
         }
 
         const view = app && ((app.canvas as any) ?? (app.view as any))
@@ -83,8 +83,8 @@ export default class BeamGraphic {
         const x1 = opts?.x1 ?? Math.floor(w * 0.75)
         const y1 = opts?.y1 ?? Math.floor(h * 0.5)
 
-        try { console.info && console.info('BeamGraphic: coords',{ x0, y0, x1, y1, viewClientWidth: view && (view.clientWidth || view.width), viewClientHeight: view && (view.clientHeight || view.height), opts }); } catch (e) {}
-        try { if (this.graphics) (this.graphics as any).__beamDebug = { x0, y0, x1, y1, w, h, opts }; } catch (e) {}
+        try { console.info && console.info('BeamGraphic: coords', { x0, y0, x1, y1, viewClientWidth: view && (view.clientWidth || view.width), viewClientHeight: view && (view.clientHeight || view.height), opts }); } catch (e) { }
+        try { if (this.graphics) (this.graphics as any).__beamDebug = { x0, y0, x1, y1, w, h, opts }; } catch (e) { }
 
         if (typeof this.graphics.moveTo === 'function') this.graphics.moveTo(x0, y0)
         if (typeof this.graphics.lineTo === 'function') this.graphics.lineTo(x1, y1)
@@ -92,7 +92,7 @@ export default class BeamGraphic {
         if (typeof this.graphics.stroke === 'function') this.graphics.stroke()
 
         // Ensure alpha is reset when drawing and start a fade animation
-        try { this.graphics.alpha = 1 } catch (e) {}
+        try { this.graphics.alpha = 1 } catch (e) { }
         const durationMs = opts?.duration ?? 0
         try {
           if (durationMs > 0) {
@@ -103,9 +103,9 @@ export default class BeamGraphic {
                 const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
                 const elapsed = now - start
                 const t = Math.min(1, elapsed / durationMs)
-                try { this.graphics.alpha = 1 - t } catch (e) {}
+                try { this.graphics.alpha = 1 - t } catch (e) { }
                 if (t >= 1) {
-                  try { if (ticker && typeof ticker.remove === 'function') ticker.remove(tick) } catch (e) {}
+                  try { if (ticker && typeof ticker.remove === 'function') ticker.remove(tick) } catch (e) { }
                   this._fadeTick = null
                 }
               } catch (e) {
@@ -114,7 +114,7 @@ export default class BeamGraphic {
             }
 
             if (ticker && typeof ticker.add === 'function') {
-              try { ticker.add(tick) } catch (e) {}
+              try { ticker.add(tick) } catch (e) { }
               this._fadeTick = tick
             } else if (typeof requestAnimationFrame === 'function') {
               const loop = () => {
@@ -122,12 +122,12 @@ export default class BeamGraphic {
                   const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
                   const elapsed = now - start
                   const t = Math.min(1, elapsed / durationMs)
-                  try { this.graphics.alpha = 1 - t } catch (e) {}
+                  try { this.graphics.alpha = 1 - t } catch (e) { }
                   if (t >= 1) {
                     this._rafId = null
                     return
                   }
-                } catch (e) {}
+                } catch (e) { }
                 this._rafId = requestAnimationFrame(loop)
               }
               this._rafId = requestAnimationFrame(loop)
@@ -159,21 +159,21 @@ export default class BeamGraphic {
         // clean up any running animation callbacks
         try {
           if (this._fadeTick && this.app && this.app.ticker && typeof this.app.ticker.remove === 'function') {
-            try { this.app.ticker.remove(this._fadeTick) } catch (e) {}
+            try { this.app.ticker.remove(this._fadeTick) } catch (e) { }
             this._fadeTick = null
           }
-        } catch (e) {}
+        } catch (e) { }
         try {
           if (this._rafId) {
-            try { cancelAnimationFrame(this._rafId) } catch (e) {}
+            try { cancelAnimationFrame(this._rafId) } catch (e) { }
             this._rafId = null
           }
-        } catch (e) {}
+        } catch (e) { }
 
         if (this.app && this.app.stage && typeof this.app.stage.removeChild === 'function') {
           this.app.stage.removeChild(this.graphics)
         }
-      } catch (e) {}
+      } catch (e) { }
       BeamGraphic.release(this.graphics)
       this.graphics = null
     } catch (e) {
