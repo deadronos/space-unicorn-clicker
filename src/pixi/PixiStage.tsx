@@ -1,21 +1,32 @@
-import React, { forwardRef, useLayoutEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useLayoutEffect, useImperativeHandle, useRef, useEffect } from 'react';
 import { createPixiApp } from './usePixiApp';
 import BeamGraphic from './display/BeamGraphic';
 import ImpactGraphic from './display/ImpactGraphic';
+import { Background } from './display/Backgrounds';
+import { Companion } from './effects/Companion';
+import { companionPool } from './effects/CompanionPool';
+import * as PIXI from 'pixi.js';
 
 type PixiStageHandle = {
   spawnBeam: (opts?: any) => void;
   spawnImpact: (opts?: any) => void;
-  app: any;
+  app: PIXI.Application | null;
 };
 
-type Props = React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode };
+type Props = React.HTMLAttributes<HTMLDivElement> & {
+  children?: React.ReactNode;
+  companionCount: number;
+  zone: number;
+};
 
 const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(props, ref) {
-  const { className, style, children, ...rest } = props;
+  const { className, style, children, companionCount, zone, ...rest } = props;
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const appRef = useRef<any>(null);
+  const appRef = useRef<PIXI.Application | null>(null);
   const timersRef = useRef<Set<number>>(new Set());
+  const activeCompanionsRef = useRef<Companion[]>([]);
+  const lastCompanionAttack = useRef<number[]>([]);
+  const backgroundRef = useRef<Background | null>(null);
 
   useLayoutEffect(() => {
     let mounted = true;
@@ -31,18 +42,21 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
         return;
       }
       appRef.current = app;
+      backgroundRef.current = new Background(app);
 
-      // handle basic DPR / sizing
       try {
-        const canvas = ((app as any).canvas ?? (app as any).view) as HTMLCanvasElement;
+        const canvas = app.view as HTMLCanvasElement;
         updateSize = () => {
           try {
-            const dpr = (typeof window !== 'undefined' && (window.devicePixelRatio || 1)) || 1;
+            const dpr = window.devicePixelRatio || 1;
             const w = container.clientWidth || 100;
             const h = container.clientHeight || 100;
             canvas.width = Math.max(1, Math.floor(w * dpr));
             canvas.height = Math.max(1, Math.floor(h * dpr));
-            try { canvas.style.width = `${w}px`; canvas.style.height = `${h}px`; } catch (e) {}
+            canvas.style.width = `${w}px`;
+            canvas.style.height = `${h}px`;
+            app.renderer.resize(w, h);
+            backgroundRef.current?.updateZone(zone, w, h);
           } catch (e) {
             // ignore
           }
@@ -50,6 +64,31 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
 
         updateSize();
         window.addEventListener('resize', updateSize);
+
+        app.ticker.add((delta) => {
+          const unicornCenter = new PIXI.Point(app.screen.width * 0.85, app.screen.height * 0.5);
+          activeCompanionsRef.current.forEach((companion, i) => {
+            companion.update(delta, unicornCenter);
+            
+            const now = Date.now();
+            if (!lastCompanionAttack.current[i]) lastCompanionAttack.current[i] = 0;
+            if (now - lastCompanionAttack.current[i] > 2000) { // 2s cooldown
+                lastCompanionAttack.current[i] = now;
+                if (ref && 'spawnBeam' in ref && typeof ref.spawnBeam === 'function') {
+                    ref.spawnBeam({
+                        x0: companion.display?.x,
+                        y0: companion.display?.y,
+                        x1: unicornCenter.x,
+                        y1: unicornCenter.y,
+                        color: '#f472b6', // pink beam for companions
+                        width: 2,
+                        duration: 150
+                    });
+                }
+            }
+          });
+        });
+
       } catch (e) {
         try {
           timersRef.current.forEach((id) => clearTimeout(id));
@@ -72,47 +111,39 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
         // ignore
       }
     };
-  }, []);
+  }, [ref, zone]);
+
+  useEffect(() => {
+    const app = appRef.current;
+    if (!app) return;
+
+    const currentCount = activeCompanionsRef.current.length;
+    if (companionCount > currentCount) {
+      for (let i = 0; i < companionCount - currentCount; i++) {
+        const companion = companionPool.get({ app });
+        activeCompanionsRef.current.push(companion);
+      }
+    } else if (companionCount < currentCount) {
+      for (let i = 0; i < currentCount - companionCount; i++) {
+        const companion = activeCompanionsRef.current.pop();
+        companion?.finish();
+      }
+    }
+  }, [companionCount]);
 
   useImperativeHandle(ref, () => ({
     spawnBeam(opts?: any) {
       const app = appRef.current;
       if (!app) return;
 
-      // If PIXI is available, use BeamGraphic which manages its own lifecycle
-      if (typeof (globalThis as any).PIXI !== 'undefined' && (globalThis as any).PIXI.Graphics) {
-        try {
-          const g = new BeamGraphic(app, opts);
-          // Shorter default duration for spawned beams so they feel snappier
-          const duration = opts?.duration ?? 200;
-          const t = window.setTimeout(() => {
-            try {
-              g.destroy();
-            } catch (e) {}
-            try { timersRef.current.delete(t); } catch (er) {}
-          }, duration);
-          try { timersRef.current.add(t); } catch (er) {}
-          return;
-        } catch (e) {
-          // fall back to canvas
-        }
-      }
-
-      const canvas = ((app as any).canvas ?? (app as any).view) as HTMLCanvasElement;
       try {
-        const ctx = canvas.getContext ? canvas.getContext('2d') : null;
-        if (ctx) {
-          ctx.save();
-          ctx.strokeStyle = opts?.color || 'magenta';
-          ctx.lineWidth = opts?.width || 2;
-          ctx.beginPath();
-          const w = canvas.width || 100;
-          const h = canvas.height || 100;
-          ctx.moveTo(opts?.x0 ?? w * 0.25, opts?.y0 ?? h * 0.5);
-          ctx.lineTo(opts?.x1 ?? w * 0.75, opts?.y1 ?? h * 0.5);
-          ctx.stroke();
-          ctx.restore();
-        }
+        const g = new BeamGraphic(app, opts);
+        const duration = opts?.duration ?? 200;
+        const t = window.setTimeout(() => {
+          try { g.destroy(); } catch (e) {}
+          try { timersRef.current.delete(t); } catch (er) {}
+        }, duration);
+        try { timersRef.current.add(t); } catch (er) {}
       } catch (e) {
         // swallow
       }
@@ -120,45 +151,20 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
     spawnImpact(opts?: any) {
       const app = appRef.current;
       if (!app) return;
-
-      if (typeof (globalThis as any).PIXI !== 'undefined' && (globalThis as any).PIXI.Graphics) {
-        try {
-          const g = new ImpactGraphic(app, opts);
-          // Shorter default duration for impact fallback visuals
-          const duration = opts?.duration ?? 200;
-          const t = window.setTimeout(() => {
-            try {
-              g.destroy();
-            } catch (e) {}
-            try { timersRef.current.delete(t); } catch (er) {}
-          }, duration);
-          try { timersRef.current.add(t); } catch (er) {}
-          return;
-        } catch (e) {
-          // fallback to canvas
-        }
-      }
-
-      const canvas = ((app as any).canvas ?? (app as any).view) as HTMLCanvasElement;
       try {
-        const ctx = canvas.getContext ? canvas.getContext('2d') : null;
-        if (ctx) {
-          ctx.save();
-          ctx.fillStyle = opts?.color || 'yellow';
-          const cx = opts?.x ?? (canvas.width || 100) / 2;
-          const cy = opts?.y ?? (canvas.height || 100) / 2;
-          const r = opts?.r ?? 6;
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
+        const g = new ImpactGraphic(app, opts);
+        const duration = opts?.duration ?? 200;
+        const t = window.setTimeout(() => {
+          try { g.destroy(); } catch (e) {}
+          try { timersRef.current.delete(t); } catch (er) {}
+        }, duration);
+        try { timersRef.current.add(t); } catch (er) {}
       } catch (e) {
         // swallow
       }
     },
     get app() {
-      return appRef.current
+      return appRef.current;
     },
   }));
 

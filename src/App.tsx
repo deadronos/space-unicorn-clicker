@@ -46,6 +46,8 @@ interface GameSnapshot {
   comboCount: number;
   comboExpiry: number;
   unicornCount: number;
+  companionCount: number;
+  zone: number;
 }
 
 interface BeamState {
@@ -119,11 +121,11 @@ const UPGRADE_DEFS: UpgradeDef[] = [
     apply: (g) => { const lvl = g.upgrades.momentum?.level ?? 0; g.clickDamage *= 1 + 0.05 * lvl; g.dps *= 1 + 0.05 * lvl; } },
   { id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
     apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; } },
-  { id: "squadron", name: "🦄 Unicorn Squadron", desc: "+1 unicorn, each adds +1.5 DPS", baseCost: 5000, costMult: 1.45,
+  { id: "drones", name: "🤖 Companion Drones", desc: "+1 companion drone that auto-fires", baseCost: 5000, costMult: 1.45,
     apply: (g) => {
-      const lvl = g.upgrades.squadron?.level ?? 0;
+      const lvl = g.upgrades.drones?.level ?? 0;
       if (lvl > 0) {
-        g.dps += g.unicornCount * 1.5;
+        g.companionCount = lvl;
       }
     } },
 ];
@@ -135,7 +137,7 @@ function createEmptyUpgrades(): Record<string, UpgradeState> {
 }
 
 function deriveStats(base: GameSnapshot): GameSnapshot {
-  const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3 };
+  const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0 };
   for (const def of UPGRADE_DEFS) def.apply(g);
   g.critChance = clamp(g.critChance, 0, 0.8);
   g.lootMultiplier *= getGemMultiplier(g.prestigeGems);
@@ -145,11 +147,13 @@ function deriveStats(base: GameSnapshot): GameSnapshot {
 function applyDamageToShip(
   ship: Ship,
   damage: number,
-  lootMultiplier: number
-): { ship: Ship; rewardEarned: number } {
+  lootMultiplier: number,
+  currentZone: number
+): { ship: Ship; rewardEarned: number; newZone: number } {
   let currentShip = { ...ship };
   let totalReward = 0;
   let remaining = damage;
+  let newZone = currentZone;
   
   while (remaining > 0) {
     const dealt = Math.min(currentShip.hp, remaining);
@@ -159,11 +163,15 @@ function applyDamageToShip(
     if (currentShip.hp <= 0) {
       const reward = Math.floor(currentShip.reward * lootMultiplier);
       totalReward += reward;
-      currentShip = shipForLevel(currentShip.level + 1);
+      const newLevel = currentShip.level + 1;
+      if (newLevel % 10 === 0) {
+        newZone = newZone + 1;
+      }
+      currentShip = shipForLevel(newLevel);
     }
   }
   
-  return { ship: currentShip, rewardEarned: totalReward };
+  return { ship: currentShip, rewardEarned: totalReward, newZone };
 }
 
 function createFreshGameState(): GameSnapshot {
@@ -184,6 +192,8 @@ function createFreshGameState(): GameSnapshot {
     comboCount: 0,
     comboExpiry: 0,
     unicornCount: 1,
+    companionCount: 0,
+    zone: 0,
   };
 }
 
@@ -203,12 +213,10 @@ export default function App() {
   const lastAutoBeam = useRef<number>(Date.now());
   const lastClickTime = useRef<number>(0);
   const pixiRef = useRef<any>(null);
-  const beamPoolRef = useRef<BeamPool | null>(null);
   const impactPoolRef = useRef<ImpactParticles | null>(null);
   const damagePoolRef = useRef<DamageNumberPool | null>(null);
 
   useEffect(() => {
-    beamPoolRef.current = new BeamPool();
     impactPoolRef.current = new ImpactParticles();
     damagePoolRef.current = new DamageNumberPool();
     return () => {
@@ -222,14 +230,14 @@ export default function App() {
       const now = Date.now();
       const allUpgrades = createEmptyUpgrades();
       const mergedUpgrades = { ...allUpgrades, ...saved.upgrades };
-      const savedWithUpgrades = { ...saved, upgrades: mergedUpgrades };
+      const savedWithUpgrades = { ...saved, upgrades: mergedUpgrades, companionCount: saved.upgrades.drones?.level ?? 0, zone: saved.zone ?? 0 };
       const seconds = clamp((now - (saved.lastTick || now)) / 1000, 0, 60 * 60 * 8);
       const derived = deriveStats(savedWithUpgrades);
       const dmg = derived.dps * seconds;
-      const { ship, rewardEarned } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier);
+      const { ship, rewardEarned, newZone } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier, saved.zone ?? 0);
       const stardust = saved.stardust + rewardEarned;
       const totalEarned = saved.totalEarned + rewardEarned;
-      return { ...savedWithUpgrades, stardust, totalEarned, ship, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0, unicornCount: saved.unicornCount ?? 1 };
+      return { ...savedWithUpgrades, stardust, totalEarned, ship, zone: newZone, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0, unicornCount: saved.unicornCount ?? 1 };
     }
     return createFreshGameState();
   });
@@ -255,45 +263,42 @@ export default function App() {
     return { x: clamp(fallbackX, 3, 97), y: clamp(fallbackY, 5, 90) };
   }, []);
 
-  const queueBeam = useCallback((unicornIndex: number, crit: boolean) => {
-    const now = Date.now();
-    const { x, y } = getUnicornHornPosition(unicornIndex);
-    // Shorten beam TTL so beams feel snappier. Crits last slightly longer.
-    const duration = crit ? 320 : 200;
-    setBeams((prev) => [
-      ...prev,
-      { id: ++beamId.current, start: now, duration, crit, unicornIndex, startX: x, startY: y },
-    ]);
-    setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
-    try {
-      // pool logic (game-logic level) — prefer central pool and optionally preallocate PIXI visuals
-      const container = clickZoneRef.current;
-      const pixi = pixiRef.current;
-      if (beamPoolRef.current) {
-        if (pixi && container) {
-          const rect = container.getBoundingClientRect();
-          // Pixi's renderer handles resolution scaling; provide coordinates in CSS pixels
-          const startXpx = (x / 100) * rect.width;
-          const startYpx = (y / 100) * rect.height;
-          const endXpx = rect.width * 0.85;
-          const endYpx = rect.height * 0.5;
-          const pixiApp = pixi.app ?? (pixi.getApp ? pixi.getApp() : undefined);
-          beamPoolRef.current.spawn(duration, { app: pixiApp, pixiOpts: { x0: startXpx, y0: startYpx, x1: endXpx, y1: endYpx, color: crit ? '#fbbf24' : '#60a5fa', width: crit ? 6 : 4 } });
-        } else {
-          beamPoolRef.current.spawn(duration);
-        }
-      }
-    } catch (e) {
-      // swallow visual errors
-    }
-  }, [getUnicornHornPosition]);
-
   const spawnHornBeams = useCallback((crit: boolean, count: number) => {
     const safeCount = Math.min(Math.max(Math.floor(count), 0), UNICORN_CARD_LAYOUT.length);
     for (let i = 0; i < safeCount; i++) {
-      queueBeam(i, crit);
+        const now = Date.now();
+        const { x, y } = getUnicornHornPosition(i);
+        // Shorten beam TTL so beams feel snappier. Crits last slightly longer.
+        const duration = crit ? 320 : 200;
+        setBeams((prev) => [
+            ...prev,
+            { id: ++beamId.current, start: now, duration, crit, unicornIndex: i, startX: x, startY: y },
+        ]);
+        setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
+        try {
+            const container = clickZoneRef.current;
+            const pixi = pixiRef.current;
+            if (pixi && container) {
+                const rect = container.getBoundingClientRect();
+                const startXpx = (x / 100) * rect.width;
+                const startYpx = (y / 100) * rect.height;
+                const endXpx = rect.width * 0.85;
+                const endYpx = rect.height * 0.5;
+                pixi.spawnBeam({
+                    duration,
+                    x0: startXpx,
+                    y0: startYpx,
+                    x1: endXpx,
+                    y1: endYpx,
+                    color: crit ? '#fbbf24' : '#60a5fa',
+                    width: crit ? 6 : 4
+                });
+            }
+        } catch (e) {
+            // swallow visual errors
+        }
     }
-  }, [queueBeam]);
+  }, [getUnicornHornPosition]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -319,10 +324,11 @@ export default function App() {
         let g = { ...prev };
         g.lastTick = Date.now();
         const dpsPerTick = derived.dps / 20;
-        const { ship, rewardEarned } = applyDamageToShip(g.ship, dpsPerTick, derived.lootMultiplier);
+        const { ship, rewardEarned, newZone } = applyDamageToShip(g.ship, dpsPerTick, derived.lootMultiplier, g.zone);
         g.ship = ship;
         g.stardust += rewardEarned;
         g.totalEarned += rewardEarned;
+        g.zone = newZone;
         if (g.autoBuy) {
           let bought = false;
           while (true) {
@@ -375,10 +381,11 @@ export default function App() {
       
       const dmg = isCrit ? derived.clickDamage * derived.critMult : derived.clickDamage;
       const shipDestroyed = g.ship.hp <= dmg;
-      const { ship, rewardEarned } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier);
+      const { ship, rewardEarned, newZone } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier, g.zone);
       g.ship = ship;
       g.stardust += rewardEarned;
       g.totalEarned += rewardEarned;
+      g.zone = newZone;
       
       if (isCrit && Math.random() < 0.05) {
         g.unicornCount += 1;
@@ -582,7 +589,7 @@ export default function App() {
                   <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
               </div>
-              <PixiStage ref={pixiRef} className="absolute inset-0 pointer-events-none z-40" style={{ width: '100%', height: '100%' }} />
+              <PixiStage ref={pixiRef} companionCount={derived.companionCount} zone={derived.zone} className="absolute inset-0 pointer-events-none z-40" style={{ width: '100%', height: '100%' }} />
               {unicornSpawnNotifications.map((usn) => (
                 <div key={usn.id} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                   <div className="text-4xl font-bold text-purple-400" 
