@@ -1,6 +1,8 @@
 import { GameSnapshot, Ship, UpgradeDef, UpgradeState } from "./types";
 import { UPGRADE_DEFS, STORAGE_KEY } from "./config";
 import { clamp, fmt } from "./utils";
+import { ACHIEVEMENT_DEFS } from "./achievements";
+import { ARTIFACT_DEFS, ArtifactDef } from "./prestige";
 
 export function shipForLevel(level: number): Ship {
     const isBoss = level % 10 === 0;
@@ -29,7 +31,7 @@ export function shipForLevel(level: number): Ship {
         ];
     }
 
-    return { level, maxHp: hp, hp, reward, isBoss, variant, generators };
+    return { id: Date.now(), level, maxHp: hp, hp, reward, isBoss, variant, generators };
 }
 
 export function loadState(): GameSnapshot | null {
@@ -42,11 +44,14 @@ export function calculatePrestigeGems(totalEarned: number): number {
     return Math.floor(Math.sqrt(totalEarned / 1000000));
 }
 
-export function getGemMultiplier(gems: number): number {
-    return 1 + (gems * 0.02);
+export function getGemMultiplier(gems: number, polishLevel: number = 0): number {
+    const bonusPerGem = 0.02 + (polishLevel * 0.005);
+    return 1 + (gems * bonusPerGem);
 }
 
 export function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
+
+export function artifactCost(def: ArtifactDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
 export function createEmptyUpgrades(): Record<string, UpgradeState> {
     return Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
@@ -54,9 +59,23 @@ export function createEmptyUpgrades(): Record<string, UpgradeState> {
 
 export function deriveStats(base: GameSnapshot): GameSnapshot {
     const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0 };
+
+    // Apply upgrades
     for (const def of UPGRADE_DEFS) def.apply(g);
+
+    // Apply artifacts
+    const artifacts = base.artifacts || {};
+    for (const def of ARTIFACT_DEFS) {
+        const level = artifacts[def.id] || 0;
+        if (level > 0) def.apply(g, level);
+    }
+
     g.critChance = clamp(g.critChance, 0, 0.8);
-    g.lootMultiplier *= getGemMultiplier(g.prestigeGems);
+
+    // Gem multiplier (using Gem Polish artifact if present)
+    const polishLevel = artifacts["gem_polish"] || 0;
+    g.lootMultiplier *= getGemMultiplier(g.prestigeGems, polishLevel);
+
     return g;
 }
 
@@ -122,6 +141,18 @@ export function applyDamageToShip(
     return { ship: currentShip, rewardEarned: totalReward, newZone, damageDealt, hitShield };
 }
 
+export function checkAchievements(g: GameSnapshot): string[] {
+    const newUnlocks: string[] = [];
+    for (const def of ACHIEVEMENT_DEFS) {
+        if (!g.achievements.includes(def.id)) {
+            if (def.condition(g)) {
+                newUnlocks.push(def.id);
+            }
+        }
+    }
+    return newUnlocks;
+}
+
 export function createFreshGameState(): GameSnapshot {
     return {
         stardust: 0,
@@ -142,5 +173,13 @@ export function createFreshGameState(): GameSnapshot {
         unicornCount: 1,
         companionCount: 0,
         zone: 0,
+        achievements: [],
+        artifacts: {},
+        stats: {
+            totalStardust: 0,
+            totalClicks: 0,
+            highestZone: 0,
+            totalUnicorns: 1
+        }
     };
 }

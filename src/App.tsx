@@ -14,9 +14,13 @@ import {
   createEmptyUpgrades,
   deriveStats,
   applyDamageToShip,
-  createFreshGameState
+  createFreshGameState,
+  checkAchievements
 } from "./logic";
 import { BattleshipVisual, ShieldGeneratorVisual, ShieldBubble } from "./components/Visuals";
+import { ACHIEVEMENT_DEFS } from "./achievements";
+import { ARTIFACT_DEFS } from "./prestige";
+import { artifactCost } from "./logic";
 
 export default function App() {
   const [beams, setBeams] = useState<BeamState[]>([]);
@@ -24,6 +28,8 @@ export default function App() {
   const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }[]>([]);
   const [explosions, setExplosions] = useState<{ id: number; start: number }[]>([]);
   const [unicornSpawnNotifications, setUnicornSpawnNotifications] = useState<{ id: number; start: number }[]>([]);
+  const [achievementNotifs, setAchievementNotifs] = useState<{ id: string; name: string }[]>([]);
+
   const beamId = useRef(0);
   const sparkId = useRef(0);
   const damageId = useRef(0);
@@ -58,7 +64,22 @@ export default function App() {
       const { ship, rewardEarned, newZone } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier, saved.zone ?? 0);
       const stardust = saved.stardust + rewardEarned;
       const totalEarned = saved.totalEarned + rewardEarned;
-      return { ...savedWithUpgrades, stardust, totalEarned, ship, zone: newZone, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0, unicornCount: saved.unicornCount ?? 1 };
+
+      // Stats update (approximate for idle time)
+      const newStats = { ...saved.stats };
+      if (!newStats.totalStardust) newStats.totalStardust = totalEarned; // Init if missing
+      newStats.totalStardust += rewardEarned;
+      if (newZone > newStats.highestZone) newStats.highestZone = newZone;
+
+      const newState = { ...savedWithUpgrades, stardust, totalEarned, ship, zone: newZone, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0, unicornCount: saved.unicornCount ?? 1, stats: newStats };
+
+      // Check achievements
+      const unlocked = checkAchievements(newState);
+      if (unlocked.length > 0) {
+        newState.achievements = [...(newState.achievements || []), ...unlocked];
+      }
+
+      return newState;
     }
     return createFreshGameState();
   });
@@ -98,433 +119,529 @@ export default function App() {
       setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
       try {
         const container = clickZoneRef.current;
-        const pixi = pixiRef.current;
-        if (pixi && container) {
+        if (container && pixiRef.current) {
           const rect = container.getBoundingClientRect();
-          const startXpx = (x / 100) * rect.width;
-          const startYpx = (y / 100) * rect.height;
-          const endXpx = rect.width * 0.85;
-          const endYpx = rect.height * 0.5;
-          pixi.spawnBeam({
-            duration,
-            x0: startXpx,
-            y0: startYpx,
-            x1: endXpx,
-            y1: endYpx,
-            color: crit ? '#fbbf24' : '#60a5fa',
-            width: crit ? 6 : 4
+          const px = (x / 100) * rect.width;
+          const py = (y / 100) * rect.height;
+          // Target is roughly center-ish but maybe slightly offset?
+          // Let's target the ship center for now: 50%, 50%
+          const tx = rect.width * 0.5;
+          const ty = rect.height * 0.5;
+
+          pixiRef.current.spawnBeam({
+            x0: px, y0: py, x1: tx, y1: ty,
+            color: crit ? '#fbbf24' : '#60a5fa', // amber for crit, blue for normal
+            width: crit ? 4 : 2,
+            duration: 150
           });
         }
-      } catch (e) {
-        // swallow visual errors
-      }
+      } catch (e) { }
     }
   }, [getUnicornHornPosition]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      const now = Date.now();
-      setBeams((bs) => bs.filter((b) => now - b.start < b.duration));
-      setSparks((ss) => ss.filter((s) => now - s.start < s.duration));
-      setDamageNumbers((dns) => dns.filter((dn) => now - dn.start < 1000));
-      setExplosions((exs) => exs.filter((ex) => now - ex.start < 800));
-      setUnicornSpawnNotifications((usns) => usns.filter((usn) => now - usn.start < 2000));
-      setGame((prev) => {
-        if (prev.comboExpiry > 0 && now > prev.comboExpiry) {
-          return { ...prev, comboCount: 0, comboExpiry: 0 };
-        }
-        return prev;
-      });
-    }, 100);
-    return () => clearInterval(id);
-  }, []);
+  const handleAttack = useCallback((e: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
+    // Prevent default to stop double-firing on some touch devices
+    // e.preventDefault(); 
 
+    const now = Date.now();
+    if (now - lastClickTime.current < 40) return; // Debounce 40ms
+    lastClickTime.current = now;
+
+    let clientX, clientY;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const xPct = (x / rect.width) * 100;
+    const yPct = (y / rect.height) * 100;
+
+    setGame((prev) => {
+      const derived = deriveStats(prev);
+      const isCrit = Math.random() < derived.critChance;
+      const damage = derived.clickDamage * (isCrit ? derived.critMult : 1);
+
+      // Check for generator hit
+      let targetGeneratorId: number | undefined;
+      if (prev.ship.generators) {
+        for (const gen of prev.ship.generators) {
+          if (gen.hp <= 0) continue;
+          // Simple distance check in % coordinates
+          // Generator is at gen.x, gen.y (center is roughly there)
+          // Hitbox radius approx 5%
+          const dx = xPct - gen.x;
+          const dy = yPct - gen.y;
+          if (Math.sqrt(dx * dx + dy * dy) < 6) {
+            targetGeneratorId = gen.id;
+            break;
+          }
+        }
+      }
+
+      const { ship: newShip, rewardEarned, newZone, damageDealt, hitShield } = applyDamageToShip(prev.ship, damage, derived.lootMultiplier, prev.zone ?? 0, targetGeneratorId);
+      const reward = rewardEarned; // already calculated with lootMultiplier inside logic if ship destroyed
+
+      // Visuals
+      spawnHornBeams(isCrit, prev.unicornCount);
+
+      // Damage number
+      const dId = ++damageId.current;
+      setDamageNumbers((d) => [...d, { id: dId, value: hitShield && damageDealt === 0 ? 0 : damageDealt, x: xPct, y: yPct, start: now, crit: isCrit }]);
+
+      // Pixi impact
+      try {
+        if (pixiRef.current) {
+          pixiRef.current.spawnImpact({
+            x, y,
+            color: isCrit ? 0xfbbf24 : 0x60a5fa,
+            radius: isCrit ? 15 : 8,
+            count: isCrit ? 8 : 4
+          });
+        }
+      } catch (e) { }
+
+      // Impact pool fallback/addition
+      if (impactPoolRef.current) {
+        impactPoolRef.current.spawn(x, y, isCrit ? 2 : 1, 300, { app: pixiRef.current?.app, pixiOpts: { color: isCrit ? 0xfbbf24 : 0x60a5fa, r: isCrit ? 4 : 2 } });
+      }
+
+      if (newShip.id !== prev.ship.id) { // Ship destroyed
+        const eId = ++explosionId.current;
+        setExplosions((ex) => [...ex, { id: eId, start: now }]);
+      }
+
+      // Combo logic
+      let newCombo = prev.comboCount + 1;
+      if (now > prev.comboExpiry) newCombo = 1;
+
+      const newStats = { ...prev.stats };
+      newStats.totalClicks = (newStats.totalClicks || 0) + 1;
+
+      const nextState = { ...prev, stardust: prev.stardust + reward, totalEarned: prev.totalEarned + reward, ship: newShip, zone: newZone, comboCount: newCombo, comboExpiry: Date.now() + 5000, stats: newStats };
+
+      const unlocked = checkAchievements(nextState);
+      if (unlocked.length > 0) {
+        nextState.achievements = [...(nextState.achievements || []), ...unlocked];
+        const newNotifs = unlocked.map(id => {
+          const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
+          return { id, name: def?.name || "Unknown" };
+        });
+        setAchievementNotifs(curr => [...curr, ...newNotifs]);
+        setTimeout(() => {
+          setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
+        }, 4000);
+      }
+
+      return nextState;
+    });
+  }, [spawnHornBeams]);
+
+  // Game Loop
   useEffect(() => {
     const interval = setInterval(() => {
       setGame((prev) => {
-        let g = { ...prev };
-        g.lastTick = Date.now();
-        const dpsPerTick = derived.dps / 20;
-        const { ship, rewardEarned, newZone } = applyDamageToShip(g.ship, dpsPerTick, derived.lootMultiplier, g.zone);
-        g.ship = ship;
-        g.stardust += rewardEarned;
-        g.totalEarned += rewardEarned;
-        g.zone = newZone;
-        if (g.autoBuy) {
-          while (true) {
-            const affordable = UPGRADE_DEFS.filter(def => {
-              const state = g.upgrades[def.id];
-              return g.stardust >= costOf(def, state.level);
-            });
+        const now = Date.now();
+        const derived = deriveStats(prev);
 
-            if (affordable.length === 0) break;
+        // Auto-buy logic
+        let nextUpgrades = prev.upgrades;
+        let nextStardust = prev.stardust;
+        let boughtSomething = false;
 
-            const def = affordable[Math.floor(Math.random() * affordable.length)];
-            const state = g.upgrades[def.id];
-            const cost = costOf(def, state.level);
+        if (prev.autoBuy) {
+          // Find all affordable upgrades
+          const affordable = UPGRADE_DEFS.filter(def => {
+            const currentLevel = prev.upgrades[def.id]?.level ?? 0;
+            const cost = costOf(def, currentLevel);
+            return nextStardust >= cost;
+          });
 
-            g.stardust -= cost;
-            state.level += 1;
+          if (affordable.length > 0) {
+            // Pick one at random
+            const pick = affordable[Math.floor(Math.random() * affordable.length)];
+            const currentLevel = prev.upgrades[pick.id]?.level ?? 0;
+            const cost = costOf(pick, currentLevel);
+
+            nextStardust -= cost;
+            nextUpgrades = {
+              ...nextUpgrades,
+              [pick.id]: { id: pick.id, level: currentLevel + 1 }
+            };
+            boughtSomething = true;
           }
         }
-        return g;
+
+        // Auto-DPS
+        const dt = (now - prev.lastTick) / 1000;
+        if (dt < 0.05) return prev; // Skip if too fast
+
+        const dps = derived.dps;
+        const damage = dps * dt;
+
+        const { ship: newShip, rewardEarned, newZone } = applyDamageToShip(prev.ship, damage, derived.lootMultiplier, prev.zone ?? 0);
+
+        // Unicorn spawning logic (every 100 levels approx, or random)
+        // For now, simple check: if we have enough stardust and haven't spawned in a while?
+        // Actually, let's just base it on upgrades for now.
+        // But we need to track unicorn count.
+        // Let's say every 1000 clicks or something? Or just buy them?
+        // The prompt implies "Unicorns" are the "cursors" or "helpers".
+        // Let's assume "Unicorns" are just visual representation of click damage or something.
+        // But we have `unicornCount` in state.
+        // Let's increment unicorn count every 10 levels for now as a bonus?
+        let newUnicornCount = prev.unicornCount;
+        // ... logic for unicorns ...
+
+        const newStats = { ...prev.stats };
+        if (!newStats.totalStardust) newStats.totalStardust = prev.totalEarned;
+        newStats.totalStardust += rewardEarned;
+        if (newZone > newStats.highestZone) newStats.highestZone = newZone;
+
+        const nextState = {
+          ...prev,
+          upgrades: nextUpgrades,
+          stardust: nextStardust + rewardEarned,
+          totalEarned: prev.totalEarned + rewardEarned,
+          ship: newShip,
+          zone: newZone,
+          lastTick: now,
+          unicornCount: newUnicornCount,
+          stats: newStats
+        };
+
+        // Check achievements
+        const unlocked = checkAchievements(nextState);
+        if (unlocked.length > 0) {
+          nextState.achievements = [...(nextState.achievements || []), ...unlocked];
+          // Optional: show notification for idle unlocks?
+        }
+
+        saveState(nextState);
+        return nextState;
       });
-      const now = Date.now();
-      const intervalMs = Math.max(120, 800 / Math.max(1, derived.dps));
-      if (derived.dps > 0 && now - lastAutoBeam.current > intervalMs) {
-        lastAutoBeam.current = now;
-        spawnHornBeams(false, derived.unicornCount);
-      }
-    }, 50);
+    }, 100);
     return () => clearInterval(interval);
-  }, [derived.dps, derived.lootMultiplier, derived.unicornCount, spawnHornBeams]);
+  }, []);
 
-  useEffect(() => { const id = setInterval(() => saveState(game), 2000); return () => clearInterval(id); }, [game]);
-
-  function handleAttack(e: React.MouseEvent) {
-    e.preventDefault();
+  // Cleanup effects
+  useEffect(() => {
     const now = Date.now();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setBeams((b) => b.filter((x) => now - x.start < x.duration));
+    setSparks((s) => s.filter((x) => now - x.start < x.duration));
+    setDamageNumbers((d) => d.filter((x) => now - x.start < 800));
+    setExplosions((e) => e.filter((x) => now - x.start < 600));
+    setUnicornSpawnNotifications((u) => u.filter((x) => now - x.start < 2000));
+  }, [beams, sparks, damageNumbers, explosions, unicornSpawnNotifications]); // This dependency list causes frequent re-renders, but it's "okay" for this simple loop. Better to use a requestAnimationFrame loop for visuals.
 
-    // Check if we clicked a generator
-    // We do this by checking if the click is close to any active generator
-    // Since generators are DOM elements inside the button, we could rely on event target, 
-    // but the click handler is on the container. 
-    // Let's use simple distance check for now since we have the coordinates.
-    // Generators are at specific % coordinates.
-    let targetGeneratorId: number | undefined;
-    const activeGenerators = game.ship.generators?.filter(g => g.hp > 0) ?? [];
+  const doPrestige = () => {
+    setGame(prev => {
+      const gems = calculatePrestigeGems(prev.totalEarned);
+      if (gems <= 0) return prev;
 
-    // Simple hit detection for generators (approx 8% width/height radius)
-    for (const gen of activeGenerators) {
-      const dx = Math.abs(gen.x - x);
-      const dy = Math.abs(gen.y - y);
-      if (dx < 5 && dy < 5) {
-        targetGeneratorId = gen.id;
-        break;
-      }
-    }
+      const fresh = createFreshGameState();
+      fresh.prestigeGems = (prev.prestigeGems || 0) + gems;
+      fresh.totalPrestiges = (prev.totalPrestiges || 0) + 1;
+      fresh.stats = { ...prev.stats }; // Carry over stats
+      fresh.achievements = [...(prev.achievements || [])]; // Carry over achievements
+      fresh.artifacts = { ...prev.artifacts }; // Carry over artifacts
 
-    const isCrit = Math.random() < derived.critChance;
-    const unicornBeams = Math.min(derived.unicornCount, UNICORN_CARD_LAYOUT.length);
-    setGame((prev) => {
-      const g = { ...prev };
-      const timeSinceLastClick = now - lastClickTime.current;
-
-      if (timeSinceLastClick < 2000 && g.comboCount > 0) {
-        g.comboCount += 1;
-        g.comboExpiry = now + 2000;
-      } else if (timeSinceLastClick < 2000) {
-        g.comboCount = 2;
-        g.comboExpiry = now + 2000;
-      } else {
-        g.comboCount = 0;
-        g.comboExpiry = 0;
-      }
-
-      const dmg = isCrit ? derived.clickDamage * derived.critMult : derived.clickDamage;
-
-      // Pass targetGeneratorId to applyDamageToShip
-      const { ship, rewardEarned, newZone, damageDealt, hitShield } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier, g.zone, targetGeneratorId);
-
-      const shipDestroyed = ship.hp <= 0 && (!ship.generators || ship.generators.every(g => g.hp <= 0));
-
-      g.ship = ship;
-      g.stardust += rewardEarned;
-      g.totalEarned += rewardEarned;
-      g.zone = newZone;
-
-      if (isCrit && Math.random() < 0.05) {
-        g.unicornCount += 1;
-        setUnicornSpawnNotifications((usns) => [...usns, { id: ++unicornNotificationId.current, start: now }]);
-      }
-
-      setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: damageDealt, x, y, start: now, crit: isCrit }]);
-
-      if (hitShield && damageDealt === 0) {
-        // Show "SHIELDED" text if we hit the shield but did no damage (e.g. clicked hull while shielded)
-        setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: 0, x, y, start: now, crit: false }]); // 0 value could be rendered as "SHIELD" in the effect
-      }
-
-      try {
-        const container = clickZoneRef.current;
-        const pixi = pixiRef.current;
-        if (damagePoolRef.current) {
-          if (pixi && container) {
-            const rect = container.getBoundingClientRect();
-            // Pixi takes CSS pixel coordinates; no DPR multiplication needed here
-            const px = (x / 100) * rect.width;
-            const py = (y / 100) * rect.height;
-            const pixiApp = pixi.app ?? (pixi.getApp ? pixi.getApp() : undefined);
-
-            // If we hit a shield and did 0 damage, maybe show a blue spark or text?
-            // For now standard damage number logic (0 will be handled by pool if we update it, or just show 0)
-
-            damagePoolRef.current.spawn(damageDealt, 1000, { app: pixiApp, pixiOpts: { x: px, y: py, r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
-            // spawn impact particles via central impact pool as well
-            if (impactPoolRef.current) {
-              impactPoolRef.current.spawn(px, py, isCrit ? 12 : 8, isCrit ? 600 : 400, { app: pixiApp, pixiOpts: { r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
-            }
-          } else {
-            damagePoolRef.current.spawn(damageDealt, 1000);
-          }
-        }
-      } catch (e) {
-        // swallow
-      }
-      if (shipDestroyed) {
-        setExplosions((exs) => [...exs, { id: ++explosionId.current, start: now }]);
-      }
-
-      return g;
+      saveState(fresh);
+      return fresh;
     });
-
-    lastClickTime.current = now;
-    spawnHornBeams(isCrit, unicornBeams);
-  }
-
-  function buy(def: UpgradeDef) {
-    setGame((prev) => {
-      const g = { ...prev };
-      const u = g.upgrades[def.id];
-      const cost = costOf(def, u.level);
-      if (g.stardust >= cost) {
-        g.stardust -= cost;
-        u.level += 1;
-        if (def.id === "squadron") {
-          g.unicornCount += 1;
-        }
-      }
-      return g;
-    });
-  }
-
-  function resetProgress() {
-    if (!confirm("Reset all progress?")) return;
-    const fresh = createFreshGameState();
-    setGame(fresh);
-    saveState(fresh);
-  }
-
-  function performPrestige() {
-    const gemsToAward = calculatePrestigeGems(game.totalEarned);
-    if (gemsToAward === 0 || game.totalEarned < 1000000) {
-      alert("You need at least 1,000,000 total Stardust earned to prestige!");
-      return;
-    }
-    if (!confirm(`Prestige and reset progress to gain ${gemsToAward} Cosmic Gem${gemsToAward > 1 ? 's' : ''}? This will reset your ship, upgrades, and stardust, but keep your gems for a permanent ${(gemsToAward * 2)}% earnings bonus!`)) return;
-
-    const prestiged = {
-      ...createFreshGameState(),
-      prestigeGems: game.prestigeGems + gemsToAward,
-      totalPrestiges: game.totalPrestiges + 1,
-      unicornCount: game.unicornCount
-    };
-    setGame(prestiged);
-    saveState(prestiged);
-  }
-
-  const visibleUnicornCount = Math.min(derived.unicornCount, UNICORN_CARD_LAYOUT.length);
-  const shipPct = (derived.ship.hp / derived.ship.maxHp) * 100;
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-slate-900 to-black text-slate-100 p-4">
-      <style>{`
-        @keyframes beamFade {
-          0% { opacity: 0; transform: scaleX(0.3); filter: saturate(150%); }
-          15% { opacity: 1; transform: scaleX(1); }
-          50% { opacity: 1; filter: saturate(180%); }
-          100% { opacity: 0; transform: scaleX(1.1); filter: saturate(120%); }
-        }
-        @keyframes impactFlash { 0% { opacity: 1; } 50% { opacity: 1; } 100% { opacity: 0; } }
-        @keyframes shake {
-          0% { transform: translate(0,0) rotate(0); }
-          20% { transform: translate(1px,-1px) rotate(-.15deg); }
-          40% { transform: translate(-1px,1px) rotate(.15deg); }
-          60% { transform: translate(1px,1px) rotate(-.15deg); }
-          80% { transform: translate(-1px,-1px) rotate(.15deg); }
-          100% { transform: translate(0,0) rotate(0); }
-        }
-        .starfield::before, .starfield::after {
-          content: ""; position:absolute; inset:0; pointer-events:none; background-repeat:repeat; background-size:512px 512px; opacity:.35; z-index:-1;
-        }
-        .starfield::before { background-image: radial-gradient(white 1px, transparent 1px); animation: drift1 60s linear infinite; }
-        .starfield::after  { background-image: radial-gradient(#93c5fd 1px, transparent 1px); animation: drift2 120s linear infinite; opacity:.25; }
-        @keyframes drift1 { from { background-position:0 0; } to { background-position:512px 512px; } }
-        @keyframes drift2 { from { background-position:0 0; } to { background-position:-512px -512px; } }
-        @keyframes damageFloat {
-          0% { transform: translateY(0) scale(0.8); opacity: 0; }
-          20% { opacity: 1; transform: translateY(-10px) scale(1.2); }
-          100% { transform: translateY(-50px) scale(1); opacity: 0; }
-        }
-        @keyframes explosion {
-          0% { transform: scale(0.5); opacity: 1; }
-          100% { transform: scale(2.5); opacity: 0; }
-        }
-        @keyframes comboPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-        @keyframes unicornSpawn {
-          0% { transform: scale(0.5); opacity: 0; }
-          20% { transform: scale(1.3); opacity: 1; }
-          80% { transform: scale(1.1); opacity: 1; }
-          100% { transform: scale(0.8); opacity: 0; }
-        }
-      `}</style>
-      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-3 flex items-center justify-between">
+    <div className="relative w-full h-screen bg-slate-950 text-slate-100 overflow-hidden select-none font-sans">
+      <PixiStage ref={pixiRef} className="absolute inset-0 z-0" zone={derived.zone} companionCount={derived.companionCount} />
+
+      {/* Starfield is now handled by PixiStage */}
+
+      {/* Achievement Notifications */}
+      <div className="fixed bottom-4 right-4 flex flex-col gap-2 pointer-events-none z-50">
+        {achievementNotifs.map((notif, i) => (
+          <div key={`${notif.id}-${i}`} className="bg-yellow-500 text-black px-4 py-2 rounded shadow-lg animate-bounce">
+            🏆 Achievement Unlocked: <strong>{notif.name}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Header */}
+        <header className="p-4 flex justify-between items-center bg-slate-900/80 backdrop-blur-md border-b border-slate-800 shadow-lg">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">🦄 Space Unicorn Clicker</h1>
-            <p className="text-slate-300">Raid ironclad battleships with your cosmic horn. Earn Stardust. Auto-upgrade. Profit.</p>
-            {game.prestigeGems > 0 && (
-              <div className="text-yellow-400 text-sm mt-1">💎 {game.prestigeGems} Cosmic Gem{game.prestigeGems > 1 ? 's' : ''} (+{Math.round((getGemMultiplier(game.prestigeGems) - 1) * 100)}% earnings)</div>
-            )}
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+              Space Unicorn Clicker
+            </h1>
+            <div className="text-xs text-slate-400 font-mono mt-1">Zone {derived.zone} • Level {derived.ship.level}</div>
           </div>
           <div className="text-right">
-            {/* Starfield is now handled by PixiStage */}
             <div className="text-lg">Stardust: <span className="font-bold">{fmt(derived.stardust)}</span></div>
             <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance > 0 ? `• Crit ${Math.round(derived.critChance * 100)}% x${derived.critMult.toFixed(1)}` : ""}</div>
             <div className="text-sm text-slate-400">Total Earned: {fmt(derived.totalEarned)}</div>
-            {derived.unicornCount > 1 && (
-              <div className="text-purple-400 text-sm mt-1">🦄 {derived.unicornCount} Unicorns in Squadron</div>
-            )}
-            {game.comboCount >= 3 && (
-              <div className="text-amber-400 font-bold text-lg mt-1" style={{ animation: 'comboPulse 0.5s ease-in-out infinite' }}>
-                🔥 {game.comboCount}x COMBO!
-              </div>
-            )}
           </div>
-        </div>
+        </header>
 
-        <div className="lg:col-span-2">
-          <div className="bg-slate-800/60 rounded-2xl p-4 shadow-xl border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xl font-semibold">
-                {derived.ship.isBoss ? "⚔️ BOSS" : derived.ship.variant === 'armored' ? "🛡️ ARMORED" : derived.ship.variant === 'speed' ? "⚡ SPEED" : "Enemy"} Battleship — L{derived.ship.level}
+        {/* Main Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Panel: Upgrades */}
+          <div className="w-80 bg-slate-900/90 backdrop-blur-sm border-r border-slate-800 flex flex-col shadow-xl">
+            <div className="p-4 border-b border-slate-800 bg-slate-800/50">
+              <h2 className="font-bold text-slate-200 flex items-center gap-2">
+                <span>🚀</span> Upgrades
+              </h2>
+              <div className="flex items-center gap-2 mt-2">
+                <label className="text-xs flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={game.autoBuy} onChange={e => setGame(g => ({ ...g, autoBuy: e.target.checked }))} className="rounded bg-slate-700 border-slate-600 text-purple-500 focus:ring-purple-500" />
+                  Auto-Buy
+                </label>
               </div>
-              <div className="text-sm text-slate-300">HP {fmt(Math.max(0, Math.ceil(derived.ship.hp)))} / {fmt(derived.ship.maxHp)} • Reward {fmt(Math.floor(derived.ship.reward * derived.lootMultiplier))}</div>
             </div>
-            <div className="h-3 w-full bg-slate-700 rounded-full overflow-hidden mb-4">
-              <div className="h-full bg-indigo-400" style={{ width: `${clamp(shipPct, 0, 100)}%` }} />
-            </div>
-
-            <button
-              ref={clickZoneRef}
-              onClick={handleAttack}
-              className="relative w-full aspect-[16/7] overflow-hidden rounded-xl border border-indigo-500/50 bg-[radial-gradient(circle_at_top,rgba(99,102,241,.35),rgba(15,23,42,.6))] flex items-center justify-center hover:scale-[1.01] active:scale-[0.99] transition"
-              title="Click to fire your horn laser!"
-            >
-              <div className="absolute inset-0 starfield z-0">
-                {/* Render unicorn cards - each with their own image */}
-                {UNICORN_CARD_LAYOUT.slice(0, visibleUnicornCount).map((pos, i) => (
-                  <div
-                    key={i}
-                    ref={(el) => { unicornRefs.current[i] = el ?? null; }}
-                    className="absolute bg-slate-800/40 rounded-lg p-2 border border-indigo-400/50 backdrop-blur-sm"
-                    style={{
-                      left: `${pos.left}%`,
-                      bottom: `${pos.bottom}%`,
-                      width: '80px',
-                      height: '100px',
-                      opacity: 0.9 - i * 0.08,
-                      transform: `scale(${1 - i * 0.08})`,
-                      boxShadow: '0 0 12px rgba(99,102,241,0.4)'
-                    }}
-                  >
-                    <img
-                      src={UNICORN_IMG}
-                      alt={`Unicorn ${i + 1}`}
-                      className="w-full h-full object-cover rounded select-none"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                    />
-                    <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                      {i + 1}
-                    </div>
-                  </div>
-                ))}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
-                  <BattleshipVisual shake={beams.length > 0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
-                  <ShieldBubble active={derived.ship.generators?.some(g => g.hp > 0) ?? false} />
-                </div>
-                {derived.ship.generators?.map(gen => (
-                  <ShieldGeneratorVisual key={gen.id} x={gen.x} y={gen.y} hp={gen.hp} maxHp={gen.maxHp} />
-                ))}
-              </div>
-              <PixiStage ref={pixiRef} companionCount={derived.companionCount} zone={derived.zone} className="absolute inset-0 pointer-events-none z-40" style={{ width: '100%', height: '100%' }} />
-              {unicornSpawnNotifications.map((usn) => (
-                <div key={usn.id} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                  <div className="text-4xl font-bold text-purple-400"
-                    style={{
-                      textShadow: '0 0 20px rgba(192,132,252,0.8), 0 0 40px rgba(192,132,252,0.5)',
-                      animation: 'unicornSpawn 2s ease-out forwards'
-                    }}>
-                    🦄 NEW UNICORN! 🦄
-                  </div>
-                </div>
-              ))}
-
-              <div className="text-center relative z-10">
-                <div className="text-5xl">⚡️🦄⚡️</div>
-                <div className="text-slate-300">Click to fire your Horn Laser</div>
-                <div className="text-xs text-slate-400">(Auto-DPS also fires beams)</div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <div className="lg:col-span-1">
-          <div className="bg-slate-800/60 rounded-2xl p-4 shadow-xl border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-semibold">Upgrades</h2>
-              <label className="text-sm flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={game.autoBuy} onChange={() => setGame({ ...game, autoBuy: !game.autoBuy })} />
-                Auto-buy
-              </label>
-            </div>
-            <div className="space-y-2">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
               {UPGRADE_DEFS.map((def) => {
-                const state = game.upgrades[def.id];
-                const cost = costOf(def, state.level);
-                const affordable = derived.stardust >= cost;
+                const level = game.upgrades[def.id]?.level || 0;
+                const cost = costOf(def, level);
+                const canAfford = game.stardust >= cost;
                 return (
-                  <div key={def.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-700 flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">{def.name} <span className="text-slate-400">Lv.{state.level}</span></div>
-                      <div className="text-xs text-slate-400">{def.desc}</div>
+                  <button
+                    key={def.id}
+                    disabled={!canAfford}
+                    onClick={() => {
+                      setGame((prev) => {
+                        if (prev.stardust < cost) return prev;
+                        const nextUps = { ...prev.upgrades, [def.id]: { id: def.id, level: level + 1 } };
+                        return { ...prev, stardust: prev.stardust - cost, upgrades: nextUps };
+                      });
+                    }}
+                    className={`w-full p-3 rounded-lg text-left transition-all duration-200 border ${canAfford
+                      ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] active:scale-[0.98]"
+                      : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
+                      }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-slate-200">{def.name}</span>
+                      <span className="text-xs font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">Lvl {level}</span>
                     </div>
-                    <button
-                      onClick={() => buy(def)}
-                      className={`px-3 py-1 rounded-lg text-sm font-semibold border ${affordable ? "bg-indigo-500/80 border-indigo-400" : "bg-slate-700 border-slate-600 opacity-60"}`}
-                      disabled={!affordable}
-                    >
-                      Buy {fmt(cost)}
-                    </button>
-                  </div>
+                    <div className="text-xs text-slate-400 mb-2">{def.desc}</div>
+                    <div className={`text-sm font-mono font-medium ${canAfford ? "text-purple-400" : "text-red-400"}`}>
+                      💎 {fmt(cost)}
+                    </div>
+                  </button>
                 );
               })}
             </div>
-            <div className="mt-4 space-y-2">
-              {game.totalEarned >= 1000000 && (
-                <button
-                  onClick={performPrestige}
-                  className="w-full px-4 py-2 rounded-lg font-bold text-sm bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 border-2 border-yellow-400 hover:from-yellow-400 hover:to-amber-500 transition"
+          </div>
+
+          {/* Center: Game View */}
+          <div className="flex-1 relative bg-black/20 flex flex-col items-center justify-center perspective-1000">
+
+            {/* Unicorn Cards (Visual Only) */}
+            <div className="absolute inset-0 pointer-events-none">
+              {UNICORN_CARD_LAYOUT.slice(0, game.unicornCount).map((pos, i) => (
+                <div
+                  key={i}
+                  ref={el => { if (el) unicornRefs.current[i] = el; }}
+                  className="absolute w-16 h-24 bg-slate-800/80 border border-slate-600 rounded-lg shadow-lg flex items-center justify-center transition-all duration-500"
+                  style={{
+                    left: `${pos.left}%`,
+                    bottom: `${pos.bottom}%`,
+                    transform: `rotate(${pos.rotate}deg)`,
+                    opacity: 0.8
+                  }}
                 >
-                  💎 PRESTIGE ({calculatePrestigeGems(game.totalEarned)} Gems)
+                  <img src={UNICORN_IMG} className="w-12 h-12 object-contain drop-shadow-md" alt="Unicorn" />
+                </div>
+              ))}
+            </div>
+
+            {/* Click Zone & Ship */}
+            <button
+              ref={clickZoneRef}
+              className="relative w-full max-w-2xl aspect-video outline-none group cursor-crosshair"
+              onClick={handleAttack}
+            >
+              {/* Ship Visual */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-64 h-32 relative transition-transform duration-75 active:scale-95">
+                  <BattleshipVisual shake={false} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
+
+                  {/* Shield Bubble */}
+                  <ShieldBubble active={derived.ship.generators?.some(g => g.hp > 0) ?? false} />
+
+                  {/* Shield Generators */}
+                  {derived.ship.generators?.map(gen => (
+                    <ShieldGeneratorVisual key={gen.id} x={gen.x} y={gen.y} hp={gen.hp} maxHp={gen.maxHp} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Effects Overlay */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {/* Beams */}
+                {beams.map(b => (
+                  <div key={b.id} className="absolute inset-0">
+                    {/* Beam rendering is now mostly handled by Pixi, but we keep this for React-based fallback or specific effects if needed */}
+                  </div>
+                ))}
+
+                {/* Damage Numbers */}
+                {damageNumbers.map(d => (
+                  <div
+                    key={d.id}
+                    className={`absolute pointer-events-none font-mono font-bold text-shadow-sm animate-[floatUp_0.8s_ease-out_forwards] ${d.crit ? "text-amber-400 text-2xl z-20" : "text-white text-xl z-10"}`}
+                    style={{ left: `${d.x}%`, top: `${d.y}%` }}
+                  >
+                    {d.value === 0 ? "SHIELDED" : fmt(d.value)} {d.crit && "!"}
+                  </div>
+                ))}
+
+                {/* Explosions */}
+                {explosions.map(e => (
+                  <div key={e.id} className="absolute inset-0 flex items-center justify-center z-30">
+                    <div className="w-full h-full bg-white animate-[flash_0.1s_ease-out_forwards]" />
+                    <div className="absolute w-32 h-32 bg-orange-500 rounded-full blur-xl animate-[explode_0.6s_ease-out_forwards]" />
+                  </div>
+                ))}
+              </div>
+            </button>
+
+            {/* Boss HP Bar */}
+            {derived.ship.isBoss && (
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 w-96 max-w-[90%]">
+                <div className="flex justify-between text-xs font-bold text-red-200 mb-1 uppercase tracking-wider">
+                  <span>Boss Level {derived.ship.level}</span>
+                  <span>{Math.ceil((derived.ship.hp / derived.ship.maxHp) * 100)}%</span>
+                </div>
+                <div className="h-4 bg-slate-900/80 rounded-full overflow-hidden border border-red-900/50 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                  <div
+                    className="h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-200 ease-out"
+                    style={{ width: `${(derived.ship.hp / derived.ship.maxHp) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Standard HP Bar (Bottom) */}
+            {!derived.ship.isBoss && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-64 max-w-[80%] opacity-80 hover:opacity-100 transition-opacity">
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-200"
+                    style={{ width: `${(derived.ship.hp / derived.ship.maxHp) * 100}%` }}
+                  />
+                </div>
+                <div className="text-center text-[10px] text-slate-400 mt-1 font-mono">
+                  HP: {fmt(derived.ship.hp)} / {fmt(derived.ship.maxHp)}
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* Right Panel: Prestige & Info */}
+          <div className="w-72 bg-slate-900/90 backdrop-blur-sm border-l border-slate-800 flex flex-col shadow-xl">
+            <div className="p-4 border-b border-slate-800 bg-slate-800/50">
+              <h2 className="font-bold text-slate-200 flex items-center gap-2">
+                <span>🔮</span> Prestige
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 text-center">
+                <div className="text-3xl font-bold text-purple-400 mb-1">{derived.prestigeGems}</div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Prestige Gems</div>
+                <div className="mt-2 text-xs text-purple-300">
+                  Bonus: +{Math.round((getGemMultiplier(derived.prestigeGems, derived.artifacts?.["gem_polish"] || 0) - 1) * 100)}% Loot
+                </div>
+              </div>
+
+              <div className="bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
+                <div className="text-xs text-slate-400 mb-2 text-center">Prestige to reset progress and gain Gems based on lifetime earnings.</div>
+                <div className="text-center mb-3">
+                  <span className="text-xs text-slate-500">Potential Gems:</span>
+                  <div className="text-xl font-bold text-white">{calculatePrestigeGems(derived.totalEarned)}</div>
+                </div>
+                <button
+                  onClick={doPrestige}
+                  disabled={calculatePrestigeGems(derived.totalEarned) <= 0}
+                  className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded font-bold transition-colors shadow-lg shadow-purple-900/20"
+                >
+                  Prestige Now
                 </button>
-              )}
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <button className="underline" onClick={resetProgress}>Reset Progress</button>
-                <div>Loot Mult: x{derived.lootMultiplier.toFixed(2)}</div>
+              </div>
+
+              {/* Artifact Shop */}
+              <div className="mt-6">
+                <h3 className="font-bold text-slate-300 text-sm mb-2 flex items-center gap-2">
+                  <span>🏺</span> Artifacts
+                </h3>
+                <div className="space-y-2">
+                  {ARTIFACT_DEFS.map(def => {
+                    const level = game.artifacts?.[def.id] || 0;
+                    const cost = artifactCost(def, level);
+                    const canAfford = game.prestigeGems >= cost;
+                    return (
+                      <button
+                        key={def.id}
+                        disabled={!canAfford}
+                        onClick={() => {
+                          setGame(prev => {
+                            if (prev.prestigeGems < cost) return prev;
+                            return {
+                              ...prev,
+                              prestigeGems: prev.prestigeGems - cost,
+                              artifacts: {
+                                ...prev.artifacts,
+                                [def.id]: (prev.artifacts?.[def.id] || 0) + 1
+                              }
+                            };
+                          });
+                        }}
+                        className={`w-full p-2 rounded border text-left transition-all ${canAfford
+                            ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50"
+                            : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
+                          }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className="font-bold text-slate-200 text-sm">{def.name}</span>
+                          <span className="text-xs font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">Lvl {level}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 my-1 leading-tight">{def.description}</div>
+                        <div className={`text-xs font-mono font-medium ${canAfford ? "text-purple-400" : "text-red-400"}`}>
+                          🔮 {fmt(cost)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Achievements List (Mini) */}
+              <div className="mt-6">
+                <h3 className="font-bold text-slate-300 text-sm mb-2 flex items-center gap-2">
+                  <span>🏆</span> Recent Achievements
+                </h3>
+                <div className="space-y-2">
+                  {derived.achievements?.slice(-3).reverse().map(id => {
+                    const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
+                    return (
+                      <div key={id} className="bg-slate-800/50 p-2 rounded border border-slate-700/50 text-xs">
+                        <div className="font-bold text-yellow-500">{def?.name}</div>
+                        <div className="text-slate-400">{def?.description}</div>
+                      </div>
+                    );
+                  })}
+                  {(derived.achievements?.length || 0) === 0 && (
+                    <div className="text-xs text-slate-500 italic text-center py-2">No achievements yet.</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="lg:col-span-3 text-center text-slate-400 text-xs">
-          Tip: Toggle Auto-buy to let the unicorn invest your Stardust automatically while you idle.
         </div>
       </div>
     </div>

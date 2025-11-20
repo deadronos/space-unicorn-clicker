@@ -9,6 +9,7 @@ export interface ShieldGenerator {
 }
 
 export interface Ship {
+    id: number;
     level: number;
     hp: number;
     maxHp: number;
@@ -48,6 +49,14 @@ export interface GameSnapshot {
     unicornCount: number;
     companionCount: number;
     zone: number;
+    achievements: string[];
+    artifacts: Record<string, number>;
+    stats: {
+        totalStardust: number;
+        totalClicks: number;
+        highestZone: number;
+        totalUnicorns: number;
+    };
 }
 
 export interface BeamState {

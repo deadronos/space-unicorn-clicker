@@ -59,6 +59,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
 export const UNICORN_CARD_LAYOUT = Array.from({ length: 5 }, (_, i) => ({
     left: 4 + i * 12,
     bottom: 6 + (i % 2) * 10,
+    rotate: (i - 2) * 5,
 }));
 
 export const BEAM_COLORS = [
