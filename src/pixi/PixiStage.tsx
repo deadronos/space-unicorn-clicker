@@ -7,6 +7,8 @@ import { Companion } from './effects/Companion';
 import { companionPool } from './effects/CompanionPool';
 import * as PIXI from 'pixi.js';
 
+import { Starfield } from './display/Starfield';
+
 type PixiStageHandle = {
   spawnBeam: (opts?: any) => void;
   spawnImpact: (opts?: any) => void;
@@ -26,7 +28,9 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
   const timersRef = useRef<Set<number>>(new Set());
   const activeCompanionsRef = useRef<Companion[]>([]);
   const lastCompanionAttack = useRef<number[]>([]);
-  // const backgroundRef = useRef<any>(null);
+
+  // ... inside PixiStage ...
+  const backgroundRef = useRef<Starfield | null>(null);
 
   useLayoutEffect(() => {
     let mounted = true;
@@ -43,7 +47,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
       }
       appRef.current = app;
 
-      // backgroundRef.current = new Background(app);
+      backgroundRef.current = new Starfield(app);
 
       try {
         const canvas = (app.canvas ?? app.view) as HTMLCanvasElement;
@@ -67,6 +71,8 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
         window.addEventListener('resize', updateSize);
 
         app.ticker.add((delta: number) => {
+          backgroundRef.current?.update(delta);
+
           const unicornCenter = new PIXI.Point(app.screen.width * 0.85, app.screen.height * 0.5);
           activeCompanionsRef.current.forEach((companion, i) => {
             companion.update(delta, unicornCenter);
@@ -107,6 +113,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
           timersRef.current.clear();
         } catch (err) { }
         try { window.removeEventListener('resize', updateSize); } catch (e) { }
+        backgroundRef.current?.destroy();
         try { appRef.current?.destroy?.(); } catch (e) { }
       } catch (e) {
         // ignore

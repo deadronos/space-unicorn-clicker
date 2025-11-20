@@ -384,6 +384,7 @@ export default function App() {
             )}
           </div>
           <div className="text-right">
+            {/* Starfield is now handled by PixiStage */}
             <div className="text-lg">Stardust: <span className="font-bold">{fmt(derived.stardust)}</span></div>
             <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance > 0 ? `• Crit ${Math.round(derived.critChance * 100)}% x${derived.critMult.toFixed(1)}` : ""}</div>
             <div className="text-sm text-slate-400">Total Earned: {fmt(derived.totalEarned)}</div>
