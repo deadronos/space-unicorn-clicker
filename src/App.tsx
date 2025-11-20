@@ -23,17 +23,15 @@ import { ARTIFACT_DEFS } from "./prestige";
 import { artifactCost } from "./logic";
 
 export default function App() {
-  const [beams, setBeams] = useState<BeamState[]>([]);
-  const [sparks, setSparks] = useState<{ id: number; start: number; duration: number }[]>([]);
-  const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }[]>([]);
-  const [explosions, setExplosions] = useState<{ id: number; start: number }[]>([]);
+  const [beams, setBeams] = useState<Array<{ id: number; start: number; duration: number; crit: boolean; unicornIndex: number; startX: number; startY: number }>>([]);
+  const [sparks, setSparks] = useState<Array<{ id: number; start: number; duration: number }>>([]);
+  const [damageNumbers, setDamageNumbers] = useState<Array<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }>>([]);
   const [unicornSpawnNotifications, setUnicornSpawnNotifications] = useState<{ id: number; start: number }[]>([]);
   const [achievementNotifs, setAchievementNotifs] = useState<{ id: string; name: string }[]>([]);
 
   const beamId = useRef(0);
   const sparkId = useRef(0);
   const damageId = useRef(0);
-  const explosionId = useRef(0);
   const unicornNotificationId = useRef(0);
   const clickZoneRef = useRef<HTMLButtonElement | null>(null);
   const unicornRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -71,7 +69,22 @@ export default function App() {
       newStats.totalStardust += rewardEarned;
       if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
-      const newState = { ...savedWithUpgrades, stardust, totalEarned, ship, zone: newZone, lastTick: now, prestigeGems: saved.prestigeGems ?? 0, totalPrestiges: saved.totalPrestiges ?? 0, comboCount: 0, comboExpiry: 0, unicornCount: saved.unicornCount ?? 1, stats: newStats };
+      const newState = {
+        ...savedWithUpgrades,
+        stardust,
+        totalEarned,
+        ship,
+        zone: newZone,
+        lastTick: now,
+        prestigeGems: saved.prestigeGems ?? 0,
+        totalPrestiges: saved.totalPrestiges ?? 0,
+        comboCount: 0,
+        comboExpiry: 0,
+        unicornCount: saved.unicornCount ?? 1,
+        stats: newStats,
+        achievements: saved.achievements || [],
+        artifacts: saved.artifacts || {}
+      };
 
       // Check achievements
       const unlocked = checkAchievements(newState);
@@ -86,50 +99,49 @@ export default function App() {
 
   const derived = useMemo(() => deriveStats(game), [game]);
 
-  const getUnicornHornPosition = useCallback((index: number) => {
-    const areaRect = clickZoneRef.current?.getBoundingClientRect();
-    const cardEl = unicornRefs.current[index];
-    if (areaRect && cardEl) {
-      const cardRect = cardEl.getBoundingClientRect();
-      const hornX = cardRect.left + cardRect.width * 0.5;
-      const hornY = cardRect.top + cardRect.height * 0.25;
-      const relX = ((hornX - areaRect.left) / areaRect.width) * 100;
-      const relY = ((hornY - areaRect.top) / areaRect.height) * 100;
-      if (Number.isFinite(relX) && Number.isFinite(relY)) {
-        return { x: clamp(relX, 2, 98), y: clamp(relY, 2, 98) };
-      }
-    }
-    const fallback = UNICORN_CARD_LAYOUT[index] ?? UNICORN_CARD_LAYOUT[0];
-    const fallbackX = fallback.left + 8;
-    const fallbackY = 100 - (fallback.bottom + 18);
-    return { x: clamp(fallbackX, 3, 97), y: clamp(fallbackY, 5, 90) };
-  }, []);
-
   const spawnHornBeams = useCallback((crit: boolean, count: number) => {
     const safeCount = Math.min(Math.max(Math.floor(count), 0), UNICORN_CARD_LAYOUT.length);
+
+    // Target center of the ship/click zone
+    const targetRect = clickZoneRef.current?.getBoundingClientRect();
+    if (!targetRect) return;
+
+    const tx = targetRect.left + targetRect.width * 0.5;
+    const ty = targetRect.top + targetRect.height * 0.5;
+
     for (let i = 0; i < safeCount; i++) {
       const now = Date.now();
-      const { x, y } = getUnicornHornPosition(i);
+      const cardEl = unicornRefs.current[i];
+
+      let startX = 0;
+      let startY = 0;
+
+      if (cardEl) {
+        const cardRect = cardEl.getBoundingClientRect();
+        startX = cardRect.left + cardRect.width * 0.5;
+        startY = cardRect.top + cardRect.height * 0.3; // Horn is roughly at top 30%
+      } else {
+        // Fallback if ref missing (shouldn't happen often)
+        startX = tx;
+        startY = ty + 200;
+      }
+
       // Shorten beam TTL so beams feel snappier. Crits last slightly longer.
       const duration = crit ? 320 : 200;
+
+      // We don't strictly need React state for beams anymore if Pixi handles it, 
+      // but keeping it for now if there are DOM overlays (though we removed most).
+      // Actually, let's keep it for safety but the visual is Pixi.
       setBeams((prev) => [
         ...prev,
-        { id: ++beamId.current, start: now, duration, crit, unicornIndex: i, startX: x, startY: y },
+        { id: ++beamId.current, start: now, duration, crit, unicornIndex: i, startX, startY },
       ]);
       setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
-      try {
-        const container = clickZoneRef.current;
-        if (container && pixiRef.current) {
-          const rect = container.getBoundingClientRect();
-          const px = (x / 100) * rect.width;
-          const py = (y / 100) * rect.height;
-          // Target is roughly center-ish but maybe slightly offset?
-          // Let's target the ship center for now: 50%, 50%
-          const tx = rect.width * 0.5;
-          const ty = rect.height * 0.5;
 
+      try {
+        if (pixiRef.current) {
           pixiRef.current.spawnBeam({
-            x0: px, y0: py, x1: tx, y1: ty,
+            x0: startX, y0: startY, x1: tx, y1: ty,
             color: crit ? '#fbbf24' : '#60a5fa', // amber for crit, blue for normal
             width: crit ? 4 : 2,
             duration: 150
@@ -137,7 +149,7 @@ export default function App() {
         }
       } catch (e) { }
     }
-  }, [getUnicornHornPosition]);
+  }, []);
 
   const handleAttack = useCallback((e: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
     // Prevent default to stop double-firing on some touch devices
@@ -197,8 +209,19 @@ export default function App() {
       // Pixi impact
       try {
         if (pixiRef.current) {
+          // Pixi expects global coordinates for spawnImpact if the stage is full screen?
+          // Wait, spawnImpact in PixiStage might be expecting local or global?
+          // Let's check PixiStage implementation. 
+          // Assuming PixiStage uses the same coordinate system (screen), we should pass clientX/clientY.
+          // But previously we passed `x, y` which were relative to the rect.
+          // Let's switch to global for consistency if PixiStage handles it.
+          // Actually, let's look at PixiStage.tsx to be sure.
+          // For now, I'll assume we need to pass global coordinates if we changed beam to global.
+          // But let's stick to what worked for impacts (relative x/y might have been wrong before too?).
+          // The user said "beams... not firing from unicorn". Impacts were fine?
+          // I'll use clientX/clientY for impacts to be safe.
           pixiRef.current.spawnImpact({
-            x, y,
+            x: clientX, y: clientY,
             color: isCrit ? 0xfbbf24 : 0x60a5fa,
             radius: isCrit ? 15 : 8,
             count: isCrit ? 8 : 4
@@ -208,12 +231,20 @@ export default function App() {
 
       // Impact pool fallback/addition
       if (impactPoolRef.current) {
-        impactPoolRef.current.spawn(x, y, isCrit ? 2 : 1, 300, { app: pixiRef.current?.app, pixiOpts: { color: isCrit ? 0xfbbf24 : 0x60a5fa, r: isCrit ? 4 : 2 } });
+        // impactPoolRef is likely using Pixi coordinates too.
+        impactPoolRef.current.spawn(clientX, clientY, isCrit ? 2 : 1, 300, { app: pixiRef.current?.app, pixiOpts: { color: isCrit ? 0xfbbf24 : 0x60a5fa, r: isCrit ? 4 : 2 } });
       }
 
       if (newShip.id !== prev.ship.id) { // Ship destroyed
-        const eId = ++explosionId.current;
-        setExplosions((ex) => [...ex, { id: eId, start: now }]);
+        // Trigger Pixi explosion at center of click zone
+        try {
+          if (pixiRef.current && clickZoneRef.current) {
+            const rect = clickZoneRef.current.getBoundingClientRect();
+            const cx = rect.left + rect.width * 0.5;
+            const cy = rect.top + rect.height * 0.5;
+            pixiRef.current.spawnExplosion(cx, cy);
+          }
+        } catch (e) { }
       }
 
       // Combo logic
@@ -329,15 +360,17 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Cleanup effects
+  // Cleanup effects using interval instead of effect to avoid infinite re-renders
   useEffect(() => {
-    const now = Date.now();
-    setBeams((b) => b.filter((x) => now - x.start < x.duration));
-    setSparks((s) => s.filter((x) => now - x.start < x.duration));
-    setDamageNumbers((d) => d.filter((x) => now - x.start < 800));
-    setExplosions((e) => e.filter((x) => now - x.start < 600));
-    setUnicornSpawnNotifications((u) => u.filter((x) => now - x.start < 2000));
-  }, [beams, sparks, damageNumbers, explosions, unicornSpawnNotifications]); // This dependency list causes frequent re-renders, but it's "okay" for this simple loop. Better to use a requestAnimationFrame loop for visuals.
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setBeams((b) => b.filter((x) => now - x.start < x.duration));
+      setSparks((s) => s.filter((x) => now - x.start < x.duration));
+      setDamageNumbers((d) => d.filter((x) => now - x.start < 800));
+      setUnicornSpawnNotifications((u) => u.filter((x) => now - x.start < 2000));
+    }, 100); // Run every 100ms
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array - only run on mount/unmount
 
   const doPrestige = () => {
     setGame(prev => {
@@ -384,6 +417,7 @@ export default function App() {
             <div className="text-lg">Stardust: <span className="font-bold">{fmt(derived.stardust)}</span></div>
             <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance > 0 ? `• Crit ${Math.round(derived.critChance * 100)}% x${derived.critMult.toFixed(1)}` : ""}</div>
             <div className="text-sm text-slate-400">Total Earned: {fmt(derived.totalEarned)}</div>
+            <div className="text-xs text-purple-400 mt-1">🦄 Unicorns: {derived.unicornCount} {derived.comboCount > 1 ? `• Combo: ${derived.comboCount}x` : ""}</div>
           </div>
         </header>
 
@@ -446,7 +480,7 @@ export default function App() {
                 <div
                   key={i}
                   ref={el => { if (el) unicornRefs.current[i] = el; }}
-                  className="absolute w-16 h-24 bg-slate-800/80 border border-slate-600 rounded-lg shadow-lg flex items-center justify-center transition-all duration-500"
+                  className="absolute w-24 h-36 bg-slate-800/80 border border-slate-600 rounded-lg shadow-lg flex items-center justify-center transition-all duration-500"
                   style={{
                     left: `${pos.left}%`,
                     bottom: `${pos.bottom}%`,
@@ -454,7 +488,7 @@ export default function App() {
                     opacity: 0.8
                   }}
                 >
-                  <img src={UNICORN_IMG} className="w-12 h-12 object-contain drop-shadow-md" alt="Unicorn" />
+                  <img src={UNICORN_IMG} className="w-full h-full p-2 object-contain drop-shadow-md" alt="Unicorn" />
                 </div>
               ))}
             </div>
@@ -499,14 +533,6 @@ export default function App() {
                     {d.value === 0 ? "SHIELDED" : fmt(d.value)} {d.crit && "!"}
                   </div>
                 ))}
-
-                {/* Explosions */}
-                {explosions.map(e => (
-                  <div key={e.id} className="absolute inset-0 flex items-center justify-center z-30">
-                    <div className="w-full h-full bg-white animate-[flash_0.1s_ease-out_forwards]" />
-                    <div className="absolute w-32 h-32 bg-orange-500 rounded-full blur-xl animate-[explode_0.6s_ease-out_forwards]" />
-                  </div>
-                ))}
               </div>
             </button>
 
@@ -515,7 +541,7 @@ export default function App() {
               <div className="absolute top-8 left-1/2 -translate-x-1/2 w-96 max-w-[90%]">
                 <div className="flex justify-between text-xs font-bold text-red-200 mb-1 uppercase tracking-wider">
                   <span>Boss Level {derived.ship.level}</span>
-                  <span>{Math.ceil((derived.ship.hp / derived.ship.maxHp) * 100)}%</span>
+                  <span>{fmt(derived.ship.hp)} / {fmt(derived.ship.maxHp)} ({Math.ceil((derived.ship.hp / derived.ship.maxHp) * 100)}%)</span>
                 </div>
                 <div className="h-4 bg-slate-900/80 rounded-full overflow-hidden border border-red-900/50 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                   <div
@@ -602,8 +628,8 @@ export default function App() {
                           });
                         }}
                         className={`w-full p-2 rounded border text-left transition-all ${canAfford
-                            ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50"
-                            : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
+                          ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50"
+                          : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
                           }`}
                       >
                         <div className="flex justify-between items-start">

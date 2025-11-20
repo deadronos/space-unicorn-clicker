@@ -29,9 +29,8 @@ export class Starfield {
         const speed = 0.2 / z;
 
         const g = new PIXI.Graphics();
-        g.beginFill(0xffffff, alpha);
-        g.drawCircle(0, 0, size);
-        g.endFill();
+        g.circle(0, 0, size);
+        g.fill({ color: 0xffffff, alpha });
 
         // Random position initially
         g.x = Math.random() * this.app.screen.width;

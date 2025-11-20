@@ -41,7 +41,7 @@ export function loadState(): GameSnapshot | null {
 export function saveState(s: GameSnapshot) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { } }
 
 export function calculatePrestigeGems(totalEarned: number): number {
-    return Math.floor(Math.sqrt(totalEarned / 1000000));
+    return Math.floor(Math.sqrt(totalEarned / 500000));
 }
 
 export function getGemMultiplier(gems: number, polishLevel: number = 0): number {
