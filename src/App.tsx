@@ -63,23 +63,23 @@ interface BeamState {
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(n, max));
 const fmt = (n: number) =>
   n >= 1e12 ? (n / 1e12).toFixed(2) + "T" :
-  n >= 1e9 ? (n / 1e9).toFixed(2) + "B" :
-  n >= 1e6 ? (n / 1e6).toFixed(2) + "M" :
-  n >= 1e3 ? (n / 1e3).toFixed(2) + "K" :
-  Math.floor(n).toString();
+    n >= 1e9 ? (n / 1e9).toFixed(2) + "B" :
+      n >= 1e6 ? (n / 1e6).toFixed(2) + "M" :
+        n >= 1e3 ? (n / 1e3).toFixed(2) + "K" :
+          Math.floor(n).toString();
 
 function shipForLevel(level: number): Ship {
   const isBoss = level % 10 === 0;
   const isArmored = !isBoss && level % 5 === 0;
   const isSpeed = !isBoss && !isArmored && level % 3 === 0;
   const variant = isBoss ? 'standard' : isArmored ? 'armored' : isSpeed ? 'speed' : 'standard';
-  
+
   const base = 30;
   let hpMult = 1;
   if (isBoss) hpMult = 8;
   else if (isArmored) hpMult = 1.5;
   else if (isSpeed) hpMult = 0.7;
-  
+
   const hp = Math.floor(base * Math.pow(1.18, level) * hpMult);
   const reward = Math.floor(10 * Math.pow(1.16, level) * (isBoss ? 5 : isArmored ? 1.3 : isSpeed ? 0.9 : 1));
   return { level, maxHp: hp, hp, reward, isBoss, variant };
@@ -90,7 +90,7 @@ const STORAGE_KEY = "space-unicorn-clicker-v2";
 function loadState(): GameSnapshot | null {
   try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return null; return JSON.parse(raw) as GameSnapshot; } catch { return null; }
 }
-function saveState(s: GameSnapshot) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {} }
+function saveState(s: GameSnapshot) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { } }
 
 function calculatePrestigeGems(totalEarned: number): number {
   return Math.floor(Math.sqrt(totalEarned / 1000000));
@@ -101,33 +101,55 @@ function getGemMultiplier(gems: number): number {
 }
 
 const UPGRADE_DEFS: UpgradeDef[] = [
-  { id: "horn", name: "🔥 Horn Laser", desc: "+1 click damage (scales)", baseCost: 10, costMult: 1.15,
-    apply: (g) => { const lvl = g.upgrades.horn?.level ?? 0; g.clickDamage = 1 + lvl * 1; } },
-  { id: "autofire", name: "⚡ Auto-Fire", desc: "+1 DPS per level", baseCost: 25, costMult: 1.15,
-    apply: (g) => { const lvl = g.upgrades.autofire?.level ?? 0; g.dps += lvl * 1; } },
-  { id: "mane", name: "✨ Plasma Mane", desc: "+10% loot per level", baseCost: 50, costMult: 1.18,
-    apply: (g) => { const lvl = g.upgrades.mane?.level ?? 0; g.lootMultiplier *= 1 + 0.1 * lvl; } },
-  { id: "core", name: "⭐ Star Core", desc: "+0.5 DPS and +0.5 click per level", baseCost: 100, costMult: 1.2,
-    apply: (g) => { const lvl = g.upgrades.core?.level ?? 0; g.dps += 0.5 * lvl; g.clickDamage += 0.5 * lvl; } },
-  { id: "crit", name: "💫 Quasar Focus", desc: "+1% crit chance per level (3x)", baseCost: 150, costMult: 1.22,
-    apply: (g) => { const lvl = g.upgrades.crit?.level ?? 0; g.critChance += 0.01 * lvl; } },
-  { id: "burst", name: "💥 Burst Fire", desc: "+0.3 click damage per level", baseCost: 250, costMult: 1.25,
-    apply: (g) => { const lvl = g.upgrades.burst?.level ?? 0; g.clickDamage += 0.3 * lvl; } },
-  { id: "turret", name: "🎯 Auto-Turrets", desc: "+0.8 DPS per level", baseCost: 500, costMult: 1.28,
-    apply: (g) => { const lvl = g.upgrades.turret?.level ?? 0; g.dps += 0.8 * lvl; } },
-  { id: "chain", name: "⚡ Chain Lightning", desc: "+0.2% crit chance, +0.1 crit mult", baseCost: 800, costMult: 1.3,
-    apply: (g) => { const lvl = g.upgrades.chain?.level ?? 0; g.critChance += 0.002 * lvl; g.critMult += 0.1 * lvl; } },
-  { id: "momentum", name: "🚀 Momentum", desc: "+5% click and DPS per level", baseCost: 1500, costMult: 1.35,
-    apply: (g) => { const lvl = g.upgrades.momentum?.level ?? 0; g.clickDamage *= 1 + 0.05 * lvl; g.dps *= 1 + 0.05 * lvl; } },
-  { id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
-    apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; } },
-  { id: "drones", name: "🤖 Companion Drones", desc: "+1 companion drone that auto-fires", baseCost: 5000, costMult: 1.45,
+  {
+    id: "horn", name: "🔥 Horn Laser", desc: "+1 click damage (scales)", baseCost: 10, costMult: 1.15,
+    apply: (g) => { const lvl = g.upgrades.horn?.level ?? 0; g.clickDamage = 1 + lvl * 1; }
+  },
+  {
+    id: "autofire", name: "⚡ Auto-Fire", desc: "+1 DPS per level", baseCost: 25, costMult: 1.15,
+    apply: (g) => { const lvl = g.upgrades.autofire?.level ?? 0; g.dps += lvl * 1; }
+  },
+  {
+    id: "mane", name: "✨ Plasma Mane", desc: "+10% loot per level", baseCost: 50, costMult: 1.18,
+    apply: (g) => { const lvl = g.upgrades.mane?.level ?? 0; g.lootMultiplier *= 1 + 0.1 * lvl; }
+  },
+  {
+    id: "core", name: "⭐ Star Core", desc: "+0.5 DPS and +0.5 click per level", baseCost: 100, costMult: 1.2,
+    apply: (g) => { const lvl = g.upgrades.core?.level ?? 0; g.dps += 0.5 * lvl; g.clickDamage += 0.5 * lvl; }
+  },
+  {
+    id: "crit", name: "💫 Quasar Focus", desc: "+1% crit chance per level (3x)", baseCost: 150, costMult: 1.22,
+    apply: (g) => { const lvl = g.upgrades.crit?.level ?? 0; g.critChance += 0.01 * lvl; }
+  },
+  {
+    id: "burst", name: "💥 Burst Fire", desc: "+0.3 click damage per level", baseCost: 250, costMult: 1.25,
+    apply: (g) => { const lvl = g.upgrades.burst?.level ?? 0; g.clickDamage += 0.3 * lvl; }
+  },
+  {
+    id: "turret", name: "🎯 Auto-Turrets", desc: "+0.8 DPS per level", baseCost: 500, costMult: 1.28,
+    apply: (g) => { const lvl = g.upgrades.turret?.level ?? 0; g.dps += 0.8 * lvl; }
+  },
+  {
+    id: "chain", name: "⚡ Chain Lightning", desc: "+0.2% crit chance, +0.1 crit mult", baseCost: 800, costMult: 1.3,
+    apply: (g) => { const lvl = g.upgrades.chain?.level ?? 0; g.critChance += 0.002 * lvl; g.critMult += 0.1 * lvl; }
+  },
+  {
+    id: "momentum", name: "🚀 Momentum", desc: "+5% click and DPS per level", baseCost: 1500, costMult: 1.35,
+    apply: (g) => { const lvl = g.upgrades.momentum?.level ?? 0; g.clickDamage *= 1 + 0.05 * lvl; g.dps *= 1 + 0.05 * lvl; }
+  },
+  {
+    id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
+    apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; }
+  },
+  {
+    id: "drones", name: "🤖 Companion Drones", desc: "+1 companion drone that auto-fires", baseCost: 5000, costMult: 1.45,
     apply: (g) => {
       const lvl = g.upgrades.drones?.level ?? 0;
       if (lvl > 0) {
         g.companionCount = lvl;
       }
-    } },
+    }
+  },
 ];
 
 function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
@@ -154,12 +176,12 @@ function applyDamageToShip(
   let totalReward = 0;
   let remaining = damage;
   let newZone = currentZone;
-  
+
   while (remaining > 0) {
     const dealt = Math.min(currentShip.hp, remaining);
     currentShip.hp -= dealt;
     remaining -= dealt;
-    
+
     if (currentShip.hp <= 0) {
       const reward = Math.floor(currentShip.reward * lootMultiplier);
       totalReward += reward;
@@ -170,7 +192,7 @@ function applyDamageToShip(
       currentShip = shipForLevel(newLevel);
     }
   }
-  
+
   return { ship: currentShip, rewardEarned: totalReward, newZone };
 }
 
@@ -266,37 +288,37 @@ export default function App() {
   const spawnHornBeams = useCallback((crit: boolean, count: number) => {
     const safeCount = Math.min(Math.max(Math.floor(count), 0), UNICORN_CARD_LAYOUT.length);
     for (let i = 0; i < safeCount; i++) {
-        const now = Date.now();
-        const { x, y } = getUnicornHornPosition(i);
-        // Shorten beam TTL so beams feel snappier. Crits last slightly longer.
-        const duration = crit ? 320 : 200;
-        setBeams((prev) => [
-            ...prev,
-            { id: ++beamId.current, start: now, duration, crit, unicornIndex: i, startX: x, startY: y },
-        ]);
-        setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
-        try {
-            const container = clickZoneRef.current;
-            const pixi = pixiRef.current;
-            if (pixi && container) {
-                const rect = container.getBoundingClientRect();
-                const startXpx = (x / 100) * rect.width;
-                const startYpx = (y / 100) * rect.height;
-                const endXpx = rect.width * 0.85;
-                const endYpx = rect.height * 0.5;
-                pixi.spawnBeam({
-                    duration,
-                    x0: startXpx,
-                    y0: startYpx,
-                    x1: endXpx,
-                    y1: endYpx,
-                    color: crit ? '#fbbf24' : '#60a5fa',
-                    width: crit ? 6 : 4
-                });
-            }
-        } catch (e) {
-            // swallow visual errors
+      const now = Date.now();
+      const { x, y } = getUnicornHornPosition(i);
+      // Shorten beam TTL so beams feel snappier. Crits last slightly longer.
+      const duration = crit ? 320 : 200;
+      setBeams((prev) => [
+        ...prev,
+        { id: ++beamId.current, start: now, duration, crit, unicornIndex: i, startX: x, startY: y },
+      ]);
+      setSparks((prev) => [...prev, { id: ++sparkId.current, start: now, duration }]);
+      try {
+        const container = clickZoneRef.current;
+        const pixi = pixiRef.current;
+        if (pixi && container) {
+          const rect = container.getBoundingClientRect();
+          const startXpx = (x / 100) * rect.width;
+          const startYpx = (y / 100) * rect.height;
+          const endXpx = rect.width * 0.85;
+          const endYpx = rect.height * 0.5;
+          pixi.spawnBeam({
+            duration,
+            x0: startXpx,
+            y0: startYpx,
+            x1: endXpx,
+            y1: endYpx,
+            color: crit ? '#fbbf24' : '#60a5fa',
+            width: crit ? 6 : 4
+          });
         }
+      } catch (e) {
+        // swallow visual errors
+      }
     }
   }, [getUnicornHornPosition]);
 
@@ -330,15 +352,20 @@ export default function App() {
         g.totalEarned += rewardEarned;
         g.zone = newZone;
         if (g.autoBuy) {
-          let bought = false;
           while (true) {
-            bought = false;
-            for (const def of UPGRADE_DEFS) {
+            const affordable = UPGRADE_DEFS.filter(def => {
               const state = g.upgrades[def.id];
-              const cost = costOf(def, state.level);
-              if (g.stardust >= cost) { g.stardust -= cost; state.level += 1; bought = true; }
-            }
-            if (!bought) break;
+              return g.stardust >= costOf(def, state.level);
+            });
+
+            if (affordable.length === 0) break;
+
+            const def = affordable[Math.floor(Math.random() * affordable.length)];
+            const state = g.upgrades[def.id];
+            const cost = costOf(def, state.level);
+
+            g.stardust -= cost;
+            state.level += 1;
           }
         }
         return g;
@@ -361,13 +388,13 @@ export default function App() {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
+
     const isCrit = Math.random() < derived.critChance;
     const unicornBeams = Math.min(derived.unicornCount, UNICORN_CARD_LAYOUT.length);
     setGame((prev) => {
       const g = { ...prev };
       const timeSinceLastClick = now - lastClickTime.current;
-      
+
       if (timeSinceLastClick < 2000 && g.comboCount > 0) {
         g.comboCount += 1;
         g.comboExpiry = now + 2000;
@@ -378,7 +405,7 @@ export default function App() {
         g.comboCount = 0;
         g.comboExpiry = 0;
       }
-      
+
       const dmg = isCrit ? derived.clickDamage * derived.critMult : derived.clickDamage;
       const shipDestroyed = g.ship.hp <= dmg;
       const { ship, rewardEarned, newZone } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier, g.zone);
@@ -386,12 +413,12 @@ export default function App() {
       g.stardust += rewardEarned;
       g.totalEarned += rewardEarned;
       g.zone = newZone;
-      
+
       if (isCrit && Math.random() < 0.05) {
         g.unicornCount += 1;
         setUnicornSpawnNotifications((usns) => [...usns, { id: ++unicornNotificationId.current, start: now }]);
       }
-      
+
       setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: dmg, x, y, start: now, crit: isCrit }]);
       try {
         const container = clickZoneRef.current;
@@ -418,10 +445,10 @@ export default function App() {
       if (shipDestroyed) {
         setExplosions((exs) => [...exs, { id: ++explosionId.current, start: now }]);
       }
-      
+
       return g;
     });
-    
+
     lastClickTime.current = now;
     spawnHornBeams(isCrit, unicornBeams);
   }
@@ -456,14 +483,14 @@ export default function App() {
       return;
     }
     if (!confirm(`Prestige and reset progress to gain ${gemsToAward} Cosmic Gem${gemsToAward > 1 ? 's' : ''}? This will reset your ship, upgrades, and stardust, but keep your gems for a permanent ${(gemsToAward * 2)}% earnings bonus!`)) return;
-    
+
     const prestiged = {
       ...createFreshGameState(),
       prestigeGems: game.prestigeGems + gemsToAward,
       totalPrestiges: game.totalPrestiges + 1,
       unicornCount: game.unicornCount
     };
-    setGame(prestiged); 
+    setGame(prestiged);
     saveState(prestiged);
   }
 
@@ -526,7 +553,7 @@ export default function App() {
           </div>
           <div className="text-right">
             <div className="text-lg">Stardust: <span className="font-bold">{fmt(derived.stardust)}</span></div>
-            <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance>0?`• Crit ${Math.round(derived.critChance*100)}% x${derived.critMult.toFixed(1)}`:""}</div>
+            <div className="text-sm text-slate-300">DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance > 0 ? `• Crit ${Math.round(derived.critChance * 100)}% x${derived.critMult.toFixed(1)}` : ""}</div>
             <div className="text-sm text-slate-400">Total Earned: {fmt(derived.totalEarned)}</div>
             {derived.unicornCount > 1 && (
               <div className="text-purple-400 text-sm mt-1">🦄 {derived.unicornCount} Unicorns in Squadron</div>
@@ -548,7 +575,7 @@ export default function App() {
               <div className="text-sm text-slate-300">HP {fmt(Math.max(0, Math.ceil(derived.ship.hp)))} / {fmt(derived.ship.maxHp)} • Reward {fmt(Math.floor(derived.ship.reward * derived.lootMultiplier))}</div>
             </div>
             <div className="h-3 w-full bg-slate-700 rounded-full overflow-hidden mb-4">
-              <div className="h-full bg-indigo-400" style={{ width: `${clamp(shipPct,0,100)}%` }} />
+              <div className="h-full bg-indigo-400" style={{ width: `${clamp(shipPct, 0, 100)}%` }} />
             </div>
 
             <button
@@ -560,12 +587,12 @@ export default function App() {
               <div className="absolute inset-0 starfield z-0">
                 {/* Render unicorn cards - each with their own image */}
                 {UNICORN_CARD_LAYOUT.slice(0, visibleUnicornCount).map((pos, i) => (
-                  <div 
+                  <div
                     key={i}
                     ref={(el) => { unicornRefs.current[i] = el ?? null; }}
-                    className="absolute bg-slate-800/40 rounded-lg p-2 border border-indigo-400/50 backdrop-blur-sm" 
-                    style={{ 
-                      left: `${pos.left}%`, 
+                    className="absolute bg-slate-800/40 rounded-lg p-2 border border-indigo-400/50 backdrop-blur-sm"
+                    style={{
+                      left: `${pos.left}%`,
                       bottom: `${pos.bottom}%`,
                       width: '80px',
                       height: '100px',
@@ -574,11 +601,11 @@ export default function App() {
                       boxShadow: '0 0 12px rgba(99,102,241,0.4)'
                     }}
                   >
-                    <img 
-                      src={UNICORN_IMG} 
-                      alt={`Unicorn ${i + 1}`} 
+                    <img
+                      src={UNICORN_IMG}
+                      alt={`Unicorn ${i + 1}`}
                       className="w-full h-full object-cover rounded select-none"
-                      onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none';}} 
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                     />
                     <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {i + 1}
@@ -586,14 +613,14 @@ export default function App() {
                   </div>
                 ))}
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
-                  <BattleshipVisual shake={beams.length>0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
+                  <BattleshipVisual shake={beams.length > 0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
                 </div>
               </div>
               <PixiStage ref={pixiRef} companionCount={derived.companionCount} zone={derived.zone} className="absolute inset-0 pointer-events-none z-40" style={{ width: '100%', height: '100%' }} />
               {unicornSpawnNotifications.map((usn) => (
                 <div key={usn.id} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                  <div className="text-4xl font-bold text-purple-400" 
-                    style={{ 
+                  <div className="text-4xl font-bold text-purple-400"
+                    style={{
                       textShadow: '0 0 20px rgba(192,132,252,0.8), 0 0 40px rgba(192,132,252,0.5)',
                       animation: 'unicornSpawn 2s ease-out forwards'
                     }}>
@@ -644,8 +671,8 @@ export default function App() {
             </div>
             <div className="mt-4 space-y-2">
               {game.totalEarned >= 1000000 && (
-                <button 
-                  onClick={performPrestige} 
+                <button
+                  onClick={performPrestige}
                   className="w-full px-4 py-2 rounded-lg font-bold text-sm bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 border-2 border-yellow-400 hover:from-yellow-400 hover:to-amber-500 transition"
                 >
                   💎 PRESTIGE ({calculatePrestigeGems(game.totalEarned)} Gems)
@@ -691,13 +718,13 @@ function BeamVisual({
   startX: number;
   startY: number;
 }) {
-  
+
   const colorScheme = BEAM_COLORS[unicornIndex % BEAM_COLORS.length];
   const uniqueId = `${unicornIndex}-${Date.now()}-${Math.random()}`;
   const duration = crit ? 700 : 600;
   const endX = 85;
   const endY = 50;
-  
+
   const BeamLine = ({ stroke, strokeWidth, strokeOpacity, animation }: { stroke: string; strokeWidth: number; strokeOpacity?: number; animation: string }) => (
     <line
       x1={startX}
@@ -711,7 +738,7 @@ function BeamVisual({
       style={{ opacity: 0, animation }}
     />
   );
-  
+
   return (
     <svg className="absolute inset-0 pointer-events-none z-50" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
@@ -730,13 +757,13 @@ function BeamVisual({
         </filter>
       </defs>
 
-      <BeamLine 
+      <BeamLine
         stroke={colorScheme.mid}
         strokeWidth={crit ? 12 : 10}
         strokeOpacity={0.4}
         animation={`beamFade ${duration}ms cubic-bezier(.1,.5,.1,1) forwards`}
       />
-      <BeamLine 
+      <BeamLine
         stroke={`url(#beamGrad-${uniqueId})`}
         strokeWidth={crit ? 6 : 5}
         strokeOpacity={1}
@@ -751,13 +778,13 @@ function BeamVisual({
         strokeWidth={crit ? 3 : 2.5}
         style={{ opacity: 0, animation: `beamFade ${duration}ms ease-out forwards` }}
       />
-      <circle 
-        cx={startX} 
-        cy={startY} 
-        r={crit ? 4 : 3} 
+      <circle
+        cx={startX}
+        cy={startY}
+        r={crit ? 4 : 3}
         fill={colorScheme.start}
         filter={`url(#glow-${uniqueId})`}
-        style={{ opacity: .95, animation: `impactFlash ${duration}ms ease-out forwards` }} 
+        style={{ opacity: .95, animation: `impactFlash ${duration}ms ease-out forwards` }}
       />
     </svg>
   );
@@ -770,7 +797,7 @@ function ImpactSparks({ duration }: { duration: number }) {
       {dots.map((d, i) => (
         <circle key={i} cx={48} cy={32} r={1.4} fill="#a5b4fc" style={{ transformOrigin: "48px 32px", transform: `translate(0,0)`, animation: `spark${i} ${Math.max(200, duration - 120)}ms ease-out forwards`, filter: "drop-shadow(0 0 6px rgba(99,102,241,.9))" }} />
       ))}
-      <style>{dots.map((d,i)=>`@keyframes spark${i}{0%{transform:translate(0,0);opacity:1}100%{transform:translate(${Math.cos(d.angle)*d.dist}px,${Math.sin(d.angle)*d.dist}px);opacity:0}}`).join("\n")}</style>
+      <style>{dots.map((d, i) => `@keyframes spark${i}{0%{transform:translate(0,0);opacity:1}100%{transform:translate(${Math.cos(d.angle) * d.dist}px,${Math.sin(d.angle) * d.dist}px);opacity:0}}`).join("\n")}</style>
     </svg>
   );
 }
@@ -779,7 +806,7 @@ function BattleshipVisual({ shake, variant, isBoss }: { shake: boolean; variant:
   const hullColor = isBoss ? '#dc2626' : variant === 'armored' ? '#1e293b' : variant === 'speed' ? '#334155' : '#0b1220';
   const hullColor2 = isBoss ? '#991b1b' : variant === 'armored' ? '#0f172a' : variant === 'speed' ? '#1e293b' : '#334155';
   const accentColor = isBoss ? '#fbbf24' : variant === 'armored' ? '#475569' : variant === 'speed' ? '#60a5fa' : '#64748b';
-  
+
   return (
     <svg className={`w-full h-full ${shake ? 'animate-[shake_220ms_ease-out]' : ''}`} viewBox="0 0 160 80">
       <defs>
@@ -800,7 +827,7 @@ function BattleshipVisual({ shake, variant, isBoss }: { shake: boolean; variant:
         </>
       )}
       <rect x="70" y="24" width={variant === 'speed' ? "12" : "16"} height="10" rx="2" fill="#1f2937" stroke="#94a3b8" />
-      {new Array(variant === 'speed' ? 3 : 5).fill(0).map((_,i)=> (<rect key={i} x={78 + i*8} y={44} width="3" height="2" fill="#cbd5e1" opacity={0.8 - i*0.1} />))}
+      {new Array(variant === 'speed' ? 3 : 5).fill(0).map((_, i) => (<rect key={i} x={78 + i * 8} y={44} width="3" height="2" fill="#cbd5e1" opacity={0.8 - i * 0.1} />))}
       <circle cx="18" cy="55" r={variant === 'speed' ? "12" : "10"} fill={`url(#engine-${variant})`} />
       <circle cx="18" cy="55" r={variant === 'speed' ? "3" : "2.5"} fill="#e2e8f0" />
       {isBoss && (
