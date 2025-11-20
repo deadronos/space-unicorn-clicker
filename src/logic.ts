@@ -16,7 +16,20 @@ export function shipForLevel(level: number): Ship {
 
     const hp = Math.floor(base * Math.pow(1.18, level) * hpMult);
     const reward = Math.floor(10 * Math.pow(1.16, level) * (isBoss ? 5 : isArmored ? 1.3 : isSpeed ? 0.9 : 1));
-    return { level, maxHp: hp, hp, reward, isBoss, variant };
+
+    let generators: any[] = [];
+    if (isBoss) {
+        // Spawn 4 generators at corners
+        const genHp = Math.ceil(hp * 0.25); // Total generator HP = 100% of boss HP (4 * 25%)
+        generators = [
+            { id: 1, maxHp: genHp, hp: genHp, x: 10, y: 10 },
+            { id: 2, maxHp: genHp, hp: genHp, x: 90, y: 10 },
+            { id: 3, maxHp: genHp, hp: genHp, x: 10, y: 90 },
+            { id: 4, maxHp: genHp, hp: genHp, x: 90, y: 90 },
+        ];
+    }
+
+    return { level, maxHp: hp, hp, reward, isBoss, variant, generators };
 }
 
 export function loadState(): GameSnapshot | null {
@@ -51,30 +64,62 @@ export function applyDamageToShip(
     ship: Ship,
     damage: number,
     lootMultiplier: number,
-    currentZone: number
-): { ship: Ship; rewardEarned: number; newZone: number } {
-    let currentShip = { ...ship };
+    currentZone: number,
+    targetGeneratorId?: number // Optional: specific generator to target
+): { ship: Ship; rewardEarned: number; newZone: number; damageDealt: number; hitShield: boolean } {
+    let currentShip = { ...ship, generators: ship.generators?.map(g => ({ ...g })) ?? [] };
     let totalReward = 0;
     let remaining = damage;
     let newZone = currentZone;
+    let damageDealt = 0;
+    let hitShield = false;
 
-    while (remaining > 0) {
-        const dealt = Math.min(currentShip.hp, remaining);
-        currentShip.hp -= dealt;
-        remaining -= dealt;
+    // Check for active generators
+    const activeGenerators = currentShip.generators.filter(g => g.hp > 0);
+    const hasShields = activeGenerators.length > 0;
 
-        if (currentShip.hp <= 0) {
-            const reward = Math.floor(currentShip.reward * lootMultiplier);
-            totalReward += reward;
-            const newLevel = currentShip.level + 1;
-            if (newLevel % 10 === 0) {
-                newZone = newZone + 1;
+    if (hasShields) {
+        hitShield = true;
+        // If a specific generator is targeted and exists/active
+        let targetGen = targetGeneratorId ? currentShip.generators.find(g => g.id === targetGeneratorId && g.hp > 0) : null;
+
+        // If no specific target (e.g. auto-dps), pick the first active one
+        if (!targetGen && !targetGeneratorId) {
+            targetGen = activeGenerators[0];
+        }
+
+        if (targetGen) {
+            const dealt = Math.min(targetGen.hp, remaining);
+            targetGen.hp -= dealt;
+            remaining -= dealt; // Excess damage is lost (doesn't spill over to hull or other gens)
+            damageDealt += dealt;
+        } else {
+            // Targeted hull or dead generator while shields are up -> 0 damage
+            damageDealt = 0;
+        }
+    } else {
+        // No shields, damage hull
+        while (remaining > 0) {
+            const dealt = Math.min(currentShip.hp, remaining);
+            currentShip.hp -= dealt;
+            remaining -= dealt;
+            damageDealt += dealt;
+
+            if (currentShip.hp <= 0) {
+                const reward = Math.floor(currentShip.reward * lootMultiplier);
+                totalReward += reward;
+                const newLevel = currentShip.level + 1;
+                if (newLevel % 10 === 0) {
+                    newZone = newZone + 1;
+                }
+                currentShip = shipForLevel(newLevel);
+                // Break loop as we have a new ship
+                remaining = 0;
             }
-            currentShip = shipForLevel(newLevel);
         }
     }
 
-    return { ship: currentShip, rewardEarned: totalReward, newZone };
+    return { ship: currentShip, rewardEarned: totalReward, newZone, damageDealt, hitShield };
 }
 
 export function createFreshGameState(): GameSnapshot {

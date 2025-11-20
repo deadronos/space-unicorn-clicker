@@ -1,5 +1,13 @@
 export type Currency = number;
 
+export interface ShieldGenerator {
+    id: number;
+    maxHp: number;
+    hp: number;
+    x: number;
+    y: number;
+}
+
 export interface Ship {
     level: number;
     hp: number;
@@ -7,6 +15,7 @@ export interface Ship {
     reward: Currency;
     isBoss: boolean;
     variant: 'standard' | 'armored' | 'speed';
+    generators: ShieldGenerator[];
 }
 
 export interface UpgradeDef {

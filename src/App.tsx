@@ -16,7 +16,7 @@ import {
   applyDamageToShip,
   createFreshGameState
 } from "./logic";
-import { BattleshipVisual } from "./components/Visuals";
+import { BattleshipVisual, ShieldGeneratorVisual, ShieldBubble } from "./components/Visuals";
 
 export default function App() {
   const [beams, setBeams] = useState<BeamState[]>([]);
@@ -188,6 +188,25 @@ export default function App() {
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
+    // Check if we clicked a generator
+    // We do this by checking if the click is close to any active generator
+    // Since generators are DOM elements inside the button, we could rely on event target, 
+    // but the click handler is on the container. 
+    // Let's use simple distance check for now since we have the coordinates.
+    // Generators are at specific % coordinates.
+    let targetGeneratorId: number | undefined;
+    const activeGenerators = game.ship.generators?.filter(g => g.hp > 0) ?? [];
+
+    // Simple hit detection for generators (approx 8% width/height radius)
+    for (const gen of activeGenerators) {
+      const dx = Math.abs(gen.x - x);
+      const dy = Math.abs(gen.y - y);
+      if (dx < 5 && dy < 5) {
+        targetGeneratorId = gen.id;
+        break;
+      }
+    }
+
     const isCrit = Math.random() < derived.critChance;
     const unicornBeams = Math.min(derived.unicornCount, UNICORN_CARD_LAYOUT.length);
     setGame((prev) => {
@@ -206,8 +225,12 @@ export default function App() {
       }
 
       const dmg = isCrit ? derived.clickDamage * derived.critMult : derived.clickDamage;
-      const shipDestroyed = g.ship.hp <= dmg;
-      const { ship, rewardEarned, newZone } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier, g.zone);
+
+      // Pass targetGeneratorId to applyDamageToShip
+      const { ship, rewardEarned, newZone, damageDealt, hitShield } = applyDamageToShip(g.ship, dmg, derived.lootMultiplier, g.zone, targetGeneratorId);
+
+      const shipDestroyed = ship.hp <= 0 && (!ship.generators || ship.generators.every(g => g.hp <= 0));
+
       g.ship = ship;
       g.stardust += rewardEarned;
       g.totalEarned += rewardEarned;
@@ -218,7 +241,13 @@ export default function App() {
         setUnicornSpawnNotifications((usns) => [...usns, { id: ++unicornNotificationId.current, start: now }]);
       }
 
-      setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: dmg, x, y, start: now, crit: isCrit }]);
+      setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: damageDealt, x, y, start: now, crit: isCrit }]);
+
+      if (hitShield && damageDealt === 0) {
+        // Show "SHIELDED" text if we hit the shield but did no damage (e.g. clicked hull while shielded)
+        setDamageNumbers((dns) => [...dns, { id: ++damageId.current, value: 0, x, y, start: now, crit: false }]); // 0 value could be rendered as "SHIELD" in the effect
+      }
+
       try {
         const container = clickZoneRef.current;
         const pixi = pixiRef.current;
@@ -229,13 +258,17 @@ export default function App() {
             const px = (x / 100) * rect.width;
             const py = (y / 100) * rect.height;
             const pixiApp = pixi.app ?? (pixi.getApp ? pixi.getApp() : undefined);
-            damagePoolRef.current.spawn(dmg, 1000, { app: pixiApp, pixiOpts: { x: px, y: py, r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
+
+            // If we hit a shield and did 0 damage, maybe show a blue spark or text?
+            // For now standard damage number logic (0 will be handled by pool if we update it, or just show 0)
+
+            damagePoolRef.current.spawn(damageDealt, 1000, { app: pixiApp, pixiOpts: { x: px, y: py, r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
             // spawn impact particles via central impact pool as well
             if (impactPoolRef.current) {
               impactPoolRef.current.spawn(px, py, isCrit ? 12 : 8, isCrit ? 600 : 400, { app: pixiApp, pixiOpts: { r: isCrit ? 8 : 5, color: isCrit ? '#fbbf24' : '#60a5fa' } });
             }
           } else {
-            damagePoolRef.current.spawn(dmg, 1000);
+            damagePoolRef.current.spawn(damageDealt, 1000);
           }
         }
       } catch (e) {
@@ -413,7 +446,11 @@ export default function App() {
                 ))}
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 w-44 h-24">
                   <BattleshipVisual shake={beams.length > 0} variant={derived.ship.variant} isBoss={derived.ship.isBoss} />
+                  <ShieldBubble active={derived.ship.generators?.some(g => g.hp > 0) ?? false} />
                 </div>
+                {derived.ship.generators?.map(gen => (
+                  <ShieldGeneratorVisual key={gen.id} x={gen.x} y={gen.y} hp={gen.hp} maxHp={gen.maxHp} />
+                ))}
               </div>
               <PixiStage ref={pixiRef} companionCount={derived.companionCount} zone={derived.zone} className="absolute inset-0 pointer-events-none z-40" style={{ width: '100%', height: '100%' }} />
               {unicornSpawnNotifications.map((usn) => (

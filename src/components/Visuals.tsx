@@ -96,6 +96,39 @@ export function ImpactSparks({ duration }: { duration: number }) {
     );
 }
 
+export function ShieldGeneratorVisual({ x, y, hp, maxHp }: { x: number; y: number; hp: number; maxHp: number }) {
+    const healthPct = (hp / maxHp) * 100;
+    const isDestroyed = hp <= 0;
+
+    if (isDestroyed) return null;
+
+    return (
+        <div
+            className="absolute w-8 h-8 -ml-4 -mt-4 z-20 cursor-pointer hover:scale-110 transition-transform"
+            style={{ left: `${x}%`, top: `${y}%` }}
+            title={`Shield Generator: ${Math.ceil(hp)}/${maxHp}`}
+        >
+            <div className="w-full h-full rounded-full bg-cyan-900 border-2 border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse relative overflow-hidden">
+                <div className="absolute bottom-0 left-0 right-0 bg-cyan-400 transition-all duration-300" style={{ height: `${healthPct}%`, opacity: 0.5 }} />
+                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-cyan-100 pointer-events-none">
+                    ⚡
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export function ShieldBubble({ active }: { active: boolean }) {
+    if (!active) return null;
+    return (
+        <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
+            <div className="w-[60%] h-[60%] rounded-full border-2 border-cyan-400/50 bg-cyan-500/10 shadow-[0_0_30px_rgba(34,211,238,0.3)] animate-[pulse_3s_ease-in-out_infinite] backdrop-blur-[1px]">
+                <div className="absolute inset-0 rounded-full border border-cyan-300/30 animate-[spin_10s_linear_infinite]" />
+            </div>
+        </div>
+    );
+}
+
 export function BattleshipVisual({ shake, variant, isBoss }: { shake: boolean; variant: 'standard' | 'armored' | 'speed'; isBoss: boolean }) {
     const hullColor = isBoss ? '#dc2626' : variant === 'armored' ? '#1e293b' : variant === 'speed' ? '#334155' : '#0b1220';
     const hullColor2 = isBoss ? '#991b1b' : variant === 'armored' ? '#0f172a' : variant === 'speed' ? '#1e293b' : '#334155';
