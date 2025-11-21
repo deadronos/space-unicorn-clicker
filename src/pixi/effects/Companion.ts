@@ -8,9 +8,8 @@ class CompanionGraphic extends PIXI.Graphics {
     app.stage.addChild(this);
     const glowColor = opts?.glowColor ?? 0xffff00;
     this.lineStyle(2, glowColor, 1);
-    this.beginFill(opts?.color ?? 0x000000);
-    this.drawCircle(0, 0, opts?.radius ?? 10);
-    this.endFill();
+    this.circle(0, 0, opts?.radius ?? 10);
+    this.fill({ color: opts?.color ?? 0x000000 });
     this.filters = [new GlowFilter({
       distance: 15,
       outerStrength: 2,

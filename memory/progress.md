@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2025-11-21
+
+### PixiJS v8 API Migration (TASK008 Continued)
+
+- Fixed remaining PixiJS v8 deprecation warnings that were causing console noise during tests
+- Migrated two files from deprecated v7 API to modern v8 API:
+  - `ParticleGraphic.ts`: Updated circle drawing to use `circle()` + `fill()` pattern
+  - `Companion.ts`: Updated circle drawing to use `circle()` + `fill()` pattern
+- Removed deprecated API calls:
+  - `beginFill()` → Define shape first with `circle()`, then call `fill()`
+  - `drawCircle()` → Use `circle()` instead
+  - `endFill()` → No longer needed in v8, shape is filled when `fill()` is called
+- **Results:**
+  - All 11 tests passing with zero deprecation warnings
+  - TypeScript typecheck passing
+  - Build successful
+  - No behavior changes, purely API modernization
+
 ## 2025-10-27
 
 ### Unicorn Horn Beams (TASK006)
