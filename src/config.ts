@@ -7,11 +7,11 @@ export const STORAGE_KEY = "space-unicorn-clicker-v2";
 export const UPGRADE_DEFS: UpgradeDef[] = [
     {
         id: "horn", name: "🔥 Horn Laser", desc: "+1 click damage (scales)", baseCost: 10, costMult: 1.15,
-        apply: (g) => { const lvl = g.upgrades.horn?.level ?? 0; g.clickDamage = 1 + lvl * 1; }
+        apply: (g) => { const lvl = g.upgrades.horn?.level ?? 0; g.clickDamage = 1 + lvl * 1.5; }
     },
     {
         id: "autofire", name: "⚡ Auto-Fire", desc: "+1 DPS per level", baseCost: 25, costMult: 1.15,
-        apply: (g) => { const lvl = g.upgrades.autofire?.level ?? 0; g.dps += lvl * 1; }
+        apply: (g) => { const lvl = g.upgrades.autofire?.level ?? 0; g.dps += lvl * 1.5; }
     },
     {
         id: "mane", name: "✨ Plasma Mane", desc: "+10% loot per level", baseCost: 50, costMult: 1.18,
@@ -19,7 +19,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     },
     {
         id: "core", name: "⭐ Star Core", desc: "+0.5 DPS and +0.5 click per level", baseCost: 100, costMult: 1.2,
-        apply: (g) => { const lvl = g.upgrades.core?.level ?? 0; g.dps += 0.5 * lvl; g.clickDamage += 0.5 * lvl; }
+        apply: (g) => { const lvl = g.upgrades.core?.level ?? 0; g.dps += 1 * lvl; g.clickDamage += 1 * lvl; }
     },
     {
         id: "crit", name: "💫 Quasar Focus", desc: "+1% crit chance per level (3x)", baseCost: 150, costMult: 1.22,
@@ -43,7 +43,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     },
     {
         id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
-        apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; }
+        apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 4 * lvl; g.clickDamage += 2 * lvl; }
     },
     {
         id: "drones", name: "🤖 Companion Drones", desc: "+1 companion drone that auto-fires", baseCost: 5000, costMult: 1.45,

@@ -64,13 +64,6 @@ export default class BeamGraphic {
         // Prefer the newer setStrokeStyle API if available (PIXI v8+); fall back
         // to the older lineStyle when necessary. Always attempt to set a color
         // to avoid invisible lines on dark backgrounds.
-        if (typeof this.graphics.setStrokeStyle === 'function') {
-          try { this.graphics.setStrokeStyle({ width: opts?.width ?? 2, color: colorNum, cap: 'round', join: 'round', alignment: 0.5 }); } catch (e) { }
-        }
-        if (typeof this.graphics.lineStyle === 'function') {
-          try { this.graphics.lineStyle(opts?.width ?? 2, colorNum); } catch (e) { }
-        }
-
         const view = app && ((app.canvas as any) ?? (app.view as any))
         // Prefer CSS pixel sizes (clientWidth/clientHeight) for coordinate calculations
         // so inputs expressed in CSS pixels (from getBoundingClientRect) match Pixi's
@@ -85,6 +78,24 @@ export default class BeamGraphic {
 
         try { console.info && console.info('BeamGraphic: coords', { x0, y0, x1, y1, viewClientWidth: view && (view.clientWidth || view.width), viewClientHeight: view && (view.clientHeight || view.height), opts }); } catch (e) { }
         try { if (this.graphics) (this.graphics as any).__beamDebug = { x0, y0, x1, y1, w, h, opts }; } catch (e) { }
+
+        // Draw Glow
+        if (typeof this.graphics.setStrokeStyle === 'function') {
+          try { this.graphics.setStrokeStyle({ width: (opts?.width ?? 2) * 4, color: colorNum, alpha: 0.3, cap: 'round', join: 'round', alignment: 0.5 }); } catch (e) { }
+        } else if (typeof this.graphics.lineStyle === 'function') {
+          try { this.graphics.lineStyle((opts?.width ?? 2) * 4, colorNum, 0.3); } catch (e) { }
+        }
+
+        if (typeof this.graphics.moveTo === 'function') this.graphics.moveTo(x0, y0)
+        if (typeof this.graphics.lineTo === 'function') this.graphics.lineTo(x1, y1)
+        if (typeof this.graphics.stroke === 'function') this.graphics.stroke()
+
+        // Draw Core
+        if (typeof this.graphics.setStrokeStyle === 'function') {
+          try { this.graphics.setStrokeStyle({ width: opts?.width ?? 2, color: 0xffffff, alpha: 1, cap: 'round', join: 'round', alignment: 0.5 }); } catch (e) { }
+        } else if (typeof this.graphics.lineStyle === 'function') {
+          try { this.graphics.lineStyle(opts?.width ?? 2, 0xffffff, 1); } catch (e) { }
+        }
 
         if (typeof this.graphics.moveTo === 'function') this.graphics.moveTo(x0, y0)
         if (typeof this.graphics.lineTo === 'function') this.graphics.lineTo(x1, y1)

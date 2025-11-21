@@ -16,7 +16,7 @@ export function shipForLevel(level: number): Ship {
     else if (isArmored) hpMult = 1.5;
     else if (isSpeed) hpMult = 0.7;
 
-    const hp = Math.floor(base * Math.pow(1.18, level) * hpMult);
+    const hp = Math.floor(base * Math.pow(1.15, level) * hpMult);
     const reward = Math.floor(10 * Math.pow(1.16, level) * (isBoss ? 5 : isArmored ? 1.3 : isSpeed ? 0.9 : 1));
 
     let generators: any[] = [];

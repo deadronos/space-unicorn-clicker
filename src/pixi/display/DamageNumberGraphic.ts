@@ -23,8 +23,8 @@ export default class DamageNumberGraphic {
   static release(t: any) {
     try {
       if (!t) return
-      try { t.text = '' } catch (e) {}
-      try { t.visible = false } catch (e) {}
+      try { t.text = '' } catch (e) { }
+      try { t.visible = false } catch (e) { }
       this._pool.push(t)
     } catch (e) {
       // ignore
@@ -46,25 +46,30 @@ export default class DamageNumberGraphic {
       try {
         if (typeof this.text.setText === 'function') this.text.text = String(opts?.value ?? '')
         else this.text.text = String(opts?.value ?? '')
-      } catch (e) {}
+
+        // Apply custom style if provided
+        if (opts?.style) {
+          try { this.text.style = opts.style } catch (e) { }
+        }
+      } catch (e) { }
 
       try {
         const x = opts?.x ?? 0
         const y = opts?.y ?? 0
         if (typeof this.text.position !== 'undefined') {
-          try { this.text.position.x = x } catch (e) {}
-          try { this.text.position.y = y } catch (e) {}
+          try { this.text.position.x = x } catch (e) { }
+          try { this.text.position.y = y } catch (e) { }
         } else if (typeof this.text.x !== 'undefined') {
-          try { this.text.x = x } catch (e) {}
-          try { this.text.y = y } catch (e) {}
+          try { this.text.x = x } catch (e) { }
+          try { this.text.y = y } catch (e) { }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       try {
         if (this.app && this.app.stage && typeof this.app.stage.addChild === 'function') {
           this.app.stage.addChild(this.text)
         }
-      } catch (e) {}
+      } catch (e) { }
     } catch (e) {
       // ignore
     }
@@ -77,7 +82,7 @@ export default class DamageNumberGraphic {
         if (this.app && this.app.stage && typeof this.app.stage.removeChild === 'function') {
           this.app.stage.removeChild(this.text)
         }
-      } catch (e) {}
+      } catch (e) { }
       DamageNumberGraphic.release(this.text)
       this.text = null
     } catch (e) {

@@ -25,13 +25,12 @@ import { artifactCost } from "./logic";
 export default function App() {
   const [beams, setBeams] = useState<Array<{ id: number; start: number; duration: number; crit: boolean; unicornIndex: number; startX: number; startY: number }>>([]);
   const [sparks, setSparks] = useState<Array<{ id: number; start: number; duration: number }>>([]);
-  const [damageNumbers, setDamageNumbers] = useState<Array<{ id: number; value: number; x: number; y: number; start: number; crit: boolean }>>([]);
+
   const [unicornSpawnNotifications, setUnicornSpawnNotifications] = useState<{ id: number; start: number }[]>([]);
   const [achievementNotifs, setAchievementNotifs] = useState<{ id: string; name: string }[]>([]);
 
   const beamId = useRef(0);
   const sparkId = useRef(0);
-  const damageId = useRef(0);
   const unicornNotificationId = useRef(0);
   const clickZoneRef = useRef<HTMLButtonElement | null>(null);
   const unicornRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -210,9 +209,20 @@ export default function App() {
       // Visuals
       spawnHornBeams(isCrit, prev.unicornCount);
 
-      // Damage number
-      const dId = ++damageId.current;
-      setDamageNumbers((d) => [...d, { id: dId, value: hitShield && damageDealt === 0 ? 0 : damageDealt, x: xPct, y: yPct, start: now, crit: isCrit }]);
+      // Damage number (Pixi)
+      if (damagePoolRef.current && pixiRef.current) {
+        const val = hitShield && damageDealt === 0 ? "SHIELDED" : damageDealt;
+        damagePoolRef.current.spawn(val as any, 800, {
+          app: pixiRef.current.app,
+          pixiOpts: {
+            x: clientX,
+            y: clientY,
+            style: isCrit
+              ? { fill: 0xfbbf24, fontSize: 36, fontWeight: 'bold', stroke: 0x000000, strokeThickness: 4, dropShadow: true, dropShadowColor: 0x000000, dropShadowDistance: 2 }
+              : { fill: 0xffffff, fontSize: 24, fontWeight: 'bold', stroke: 0x000000, strokeThickness: 3 }
+          }
+        });
+      }
 
       // Pixi impact
       try {
@@ -374,7 +384,6 @@ export default function App() {
       const now = Date.now();
       setBeams((b) => b.filter((x) => now - x.start < x.duration));
       setSparks((s) => s.filter((x) => now - x.start < x.duration));
-      setDamageNumbers((d) => d.filter((x) => now - x.start < 800));
       setUnicornSpawnNotifications((u) => u.filter((x) => now - x.start < 2000));
     }, 100); // Run every 100ms
     return () => clearInterval(interval);
@@ -532,16 +541,7 @@ export default function App() {
                   </div>
                 ))}
 
-                {/* Damage Numbers */}
-                {damageNumbers.map(d => (
-                  <div
-                    key={d.id}
-                    className={`absolute pointer-events-none font-mono font-bold text-shadow-sm animate-[floatUp_0.8s_ease-out_forwards] ${d.crit ? "text-amber-400 text-2xl z-20" : "text-white text-xl z-10"}`}
-                    style={{ left: `${d.x}%`, top: `${d.y}%` }}
-                  >
-                    {d.value === 0 ? "SHIELDED" : fmt(d.value)} {d.crit && "!"}
-                  </div>
-                ))}
+
               </div>
             </button>
 
