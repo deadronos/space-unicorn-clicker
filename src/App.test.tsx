@@ -16,16 +16,18 @@ describe('App Component', () => {
     const attackButton = screen.getByTitle('Click to fire your horn laser!');
 
     // The initial state should be 1 unicorn, so no squadron text.
-    let unicornDisplay = screen.queryByText(/Unicorns in Squadron/);
-    expect(unicornDisplay).not.toBeInTheDocument();
+    // Actually, the text is always visible now: "🦄 Unicorns: 1"
+    let unicornDisplay = screen.getByText(/🦄 Unicorns:/);
+    expect(unicornDisplay).toBeInTheDocument();
+    expect(unicornDisplay.textContent).toContain('🦄 Unicorns: 1');
 
     // First click, which is a crit that spawns a unicorn.
     fireEvent.click(attackButton);
 
     // We should now have 2 unicorns.
-    unicornDisplay = screen.queryByText(/Unicorns in Squadron/);
+    unicornDisplay = screen.getByText(/🦄 Unicorns:/);
     expect(unicornDisplay).toBeInTheDocument();
-    expect(unicornDisplay?.textContent).toContain('2 Unicorns in Squadron');
+    expect(unicornDisplay.textContent).toContain('🦄 Unicorns: 2');
 
     // Wait for the next game tick.
     act(() => {
@@ -33,8 +35,8 @@ describe('App Component', () => {
     });
 
     // The unicorn display should still show 2 unicorns.
-    unicornDisplay = screen.queryByText(/Unicorns in Squadron/);
+    unicornDisplay = screen.getByText(/🦄 Unicorns:/);
     expect(unicornDisplay).toBeInTheDocument();
-    expect(unicornDisplay?.textContent).toContain('2 Unicorns in Squadron');
+    expect(unicornDisplay.textContent).toContain('🦄 Unicorns: 2');
   });
 });

@@ -227,10 +227,18 @@ export async function createPixiApp(container: HTMLElement, options?: any): Prom
         try {
           canvas.width = Math.max(1, Math.floor(w * dpr));
           canvas.height = Math.max(1, Math.floor(h * dpr));
+          if (app.screen) {
+            app.screen.width = w;
+            app.screen.height = h;
+          }
         } catch (e) {
           // ignore
         }
       },
+    },
+    screen: {
+      width: Math.max(1, Math.floor(width)),
+      height: Math.max(1, Math.floor(height)),
     },
     destroy(removeView = true) {
       try {
