@@ -5,3 +5,19 @@
 
 /* Keep app layout baseline: ensure root fills the viewport. */
 html, body, #root { height: 100%; }
+
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(15);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 0.6s linear;
+}
+
