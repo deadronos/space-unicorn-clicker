@@ -32,7 +32,7 @@ export class ParticleGraphic {
 
         if (!opts.existingGraphic) {
             this.graphic.circle(0, 0, opts.size || 2);
-            this.graphic.fill(opts.color);
+            this.graphic.fill({ color: opts.color });
             this.app.stage.addChild(this.graphic);
         }
 
