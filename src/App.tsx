@@ -179,6 +179,14 @@ export default function App() {
       const isCrit = Math.random() < derived.critChance;
       const damage = derived.clickDamage * (isCrit ? derived.critMult : 1);
 
+      // Unicorn spawn logic: 5% chance on crit to spawn a new unicorn
+      let newUnicornCount = prev.unicornCount;
+      if (isCrit && Math.random() < 0.05) {
+        newUnicornCount++;
+        const notifId = ++unicornNotificationId.current;
+        setUnicornSpawnNotifications(prev => [...prev, { id: notifId, start: now }]);
+      }
+
       // Check for generator hit
       let targetGeneratorId: number | undefined;
       if (prev.ship.generators) {
@@ -254,7 +262,7 @@ export default function App() {
       const newStats = { ...prev.stats };
       newStats.totalClicks = (newStats.totalClicks || 0) + 1;
 
-      const nextState = { ...prev, stardust: prev.stardust + reward, totalEarned: prev.totalEarned + reward, ship: newShip, zone: newZone, comboCount: newCombo, comboExpiry: Date.now() + 5000, stats: newStats };
+      const nextState = { ...prev, stardust: prev.stardust + reward, totalEarned: prev.totalEarned + reward, ship: newShip, zone: newZone, comboCount: newCombo, comboExpiry: Date.now() + 5000, stats: newStats, unicornCount: newUnicornCount };
 
       const unlocked = checkAchievements(nextState);
       if (unlocked.length > 0) {
@@ -408,7 +416,7 @@ export default function App() {
         {/* Header */}
         <header className="p-4 flex justify-between items-center bg-slate-900/80 backdrop-blur-md border-b border-slate-800 shadow-lg">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
+            <h1 className="text-2xl font-bold bg-linear-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
               Space Unicorn Clicker
             </h1>
             <div className="text-xs text-slate-400 font-mono mt-1">Zone {derived.zone} • Level {derived.ship.level}</div>
@@ -496,6 +504,7 @@ export default function App() {
             {/* Click Zone & Ship */}
             <button
               ref={clickZoneRef}
+              title="Click to fire your horn laser!"
               className="relative w-full max-w-2xl aspect-video outline-none group cursor-crosshair"
               onClick={handleAttack}
             >
@@ -545,7 +554,7 @@ export default function App() {
                 </div>
                 <div className="h-4 bg-slate-900/80 rounded-full overflow-hidden border border-red-900/50 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                   <div
-                    className="h-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-200 ease-out"
+                    className="h-full bg-linear-to-r from-red-600 to-red-500 transition-all duration-200 ease-out"
                     style={{ width: `${(derived.ship.hp / derived.ship.maxHp) * 100}%` }}
                   />
                 </div>
@@ -557,7 +566,7 @@ export default function App() {
               <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-64 max-w-[80%] opacity-80 hover:opacity-100 transition-opacity">
                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-200"
+                    className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-200"
                     style={{ width: `${(derived.ship.hp / derived.ship.maxHp) * 100}%` }}
                   />
                 </div>

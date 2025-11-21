@@ -10,6 +10,7 @@
 
 ## Completed
 
+- [TASK008] Fix tests, lint and typecheck — Completed 2025-11-21
 - [TASK007] Pixi renderer rewrite — Completed 2025-11-08
 - [TASK002] Implement Prestige System — Completed 2025-10-26
 - [TASK003] Add Enhanced Visual Effects — Completed 2025-10-26
