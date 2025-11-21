@@ -31,9 +31,8 @@ export class ParticleGraphic {
         this.graphic = opts.existingGraphic || new PIXI.Graphics();
 
         if (!opts.existingGraphic) {
-            this.graphic.beginFill(opts.color);
-            this.graphic.drawCircle(0, 0, opts.size || 2);
-            this.graphic.endFill();
+            this.graphic.circle(0, 0, opts.size || 2);
+            this.graphic.fill({ color: opts.color });
             this.app.stage.addChild(this.graphic);
         }
 

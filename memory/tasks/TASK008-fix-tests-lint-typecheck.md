@@ -27,7 +27,22 @@ Fix tests, lint and typecheck
 
 ## Progress Log
 
-### 2025-11-21
+### 2025-11-21 (Second Session)
+
+- Fixed remaining PixiJS v8 deprecation warnings
+- Updated `src/pixi/display/ParticleGraphic.ts`:
+  - Replaced `beginFill(color)` → `circle()` then `fill(color)`
+  - Replaced `drawCircle(0, 0, size)` → `circle(0, 0, size)`
+  - Removed `endFill()` (no longer needed in v8 API)
+- Updated `src/pixi/effects/Companion.ts`:
+  - Replaced `beginFill(color)` → `circle()` then `fill(color)`
+  - Replaced `drawCircle(0, 0, radius)` → `circle(0, 0, radius)`
+  - Removed `endFill()` (no longer needed in v8 API)
+- All tests passing (11/11) with no deprecation warnings
+- Typecheck passing
+- Build successful
+
+### 2025-11-21 (First Session)
 
 - Updated `src/pixi/usePixiApp.ts` to add `screen` to fallback app.
 - Updated `src/pixi/pixi-stage-pixi.test.ts` to mock `screen` and fix `initialChildren` check.
