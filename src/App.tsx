@@ -5,6 +5,7 @@ import { DamageNumberPool } from "./pixi/effects/DamageNumbers";
 import { BeamState, GameSnapshot, UpgradeDef } from "./types";
 import { UNICORN_IMG, UPGRADE_DEFS, UNICORN_CARD_LAYOUT } from "./config";
 import { clamp, fmt } from "./utils";
+import { RippleButton } from "./components/RippleButton";
 import {
   loadState,
   saveState,
@@ -439,9 +440,9 @@ export default function App() {
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-hidden">
           {/* Left Panel: Upgrades */}
-          <div className="w-80 bg-slate-900/90 backdrop-blur-sm border-r border-slate-800 flex flex-col shadow-xl">
+          <div className="order-2 lg:order-1 w-full md:w-1/2 lg:w-80 bg-slate-900/90 backdrop-blur-sm border-r border-slate-800 flex flex-col shadow-xl h-96 lg:h-auto">
             <div className="p-4 border-b border-slate-800 bg-slate-800/50">
               <h2 className="font-bold text-slate-200 flex items-center gap-2">
                 <span>🚀</span> Upgrades
@@ -489,7 +490,7 @@ export default function App() {
           </div>
 
           {/* Center: Game View */}
-          <div className="flex-1 relative bg-black/20 flex flex-col items-center justify-center perspective-1000">
+          <div className="order-1 lg:order-2 w-full lg:flex-1 h-[50vh] lg:h-auto relative bg-black/20 flex flex-col items-center justify-center perspective-1000 shrink-0">
 
             {/* Unicorn Cards (Visual Only) */}
             <div className="absolute inset-0 pointer-events-none">
@@ -497,7 +498,7 @@ export default function App() {
                 <div
                   key={i}
                   ref={el => { if (el) unicornRefs.current[i] = el; }}
-                  className="absolute w-24 h-36 bg-slate-800/80 border border-slate-600 rounded-lg shadow-lg flex items-center justify-center transition-all duration-500"
+                  className="absolute w-32 h-48 bg-slate-800/80 border border-slate-600 rounded-lg shadow-lg flex items-center justify-center transition-all duration-500"
                   style={{
                     left: `${pos.left}%`,
                     bottom: `${pos.bottom}%`,
@@ -511,7 +512,7 @@ export default function App() {
             </div>
 
             {/* Click Zone & Ship */}
-            <button
+            <RippleButton
               ref={clickZoneRef}
               title="Click to fire your horn laser!"
               className="relative w-full max-w-2xl aspect-video outline-none group cursor-crosshair"
@@ -543,7 +544,7 @@ export default function App() {
 
 
               </div>
-            </button>
+            </RippleButton>
 
             {/* Boss HP Bar */}
             {derived.ship.isBoss && (
@@ -554,7 +555,7 @@ export default function App() {
                 </div>
                 <div className="h-4 bg-slate-900/80 rounded-full overflow-hidden border border-red-900/50 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                   <div
-                    className="h-full bg-linear-to-r from-red-600 to-red-500 transition-all duration-200 ease-out"
+                    className="h-full bg-linear-to-r from-red-600 to-red-500 transition-all duration-300 ease-out"
                     style={{ width: `${(derived.ship.hp / derived.ship.maxHp) * 100}%` }}
                   />
                 </div>
@@ -566,7 +567,7 @@ export default function App() {
               <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-64 max-w-[80%] opacity-80 hover:opacity-100 transition-opacity">
                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-200"
+                    className="h-full bg-linear-to-r from-blue-500 to-cyan-400 transition-all duration-300 ease-out"
                     style={{ width: `${(derived.ship.hp / derived.ship.maxHp) * 100}%` }}
                   />
                 </div>
@@ -579,7 +580,7 @@ export default function App() {
           </div>
 
           {/* Right Panel: Prestige & Info */}
-          <div className="w-72 bg-slate-900/90 backdrop-blur-sm border-l border-slate-800 flex flex-col shadow-xl">
+          <div className="order-3 lg:order-3 w-full md:w-1/2 lg:w-72 bg-slate-900/90 backdrop-blur-sm border-l border-slate-800 flex flex-col shadow-xl h-96 lg:h-auto">
             <div className="p-4 border-b border-slate-800 bg-slate-800/50">
               <h2 className="font-bold text-slate-200 flex items-center gap-2">
                 <span>🔮</span> Prestige
@@ -678,7 +679,7 @@ export default function App() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
