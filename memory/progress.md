@@ -2,6 +2,12 @@
 
 ## 2025-11-21
 
+### App refactor (TASK009)
+
+- Split monolithic `App.tsx` into `useGameController` hook plus `HeaderBar`, `UpgradePanel`, `GameView`, `PrestigePanel`, and `AchievementToasts` components for clearer structure.
+- Preserved game loop, attack/crit/unicorn spawning, prestige, and artifact behaviors while keeping Pixi refs in the hook.
+- Tests passing after refactor (`npm test`).
+
 ### PixiJS v8 API Migration (TASK008 Continued)
 
 - Fixed remaining PixiJS v8 deprecation warnings that were causing console noise during tests
