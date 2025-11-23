@@ -32,7 +32,5 @@ function createWav(filePath, freq, duration=0.18, volume=0.6, sampleRate=44100) 
 }
 const out = (p)=>path.join(__dirname, '..', p);
 createWav(out('public/sfx/combo_chime.wav'), 880, 0.18, 0.6);
-createWav(out('public/sfx/combo_chime.mp3'), 880, 0.18, 0.6);
 createWav(out('public/sfx/achievement_unlock.wav'), 660, 0.25, 0.6);
-createWav(out('public/sfx/achievement_unlock.mp3'), 660, 0.25, 0.6);
 console.log('Generated chimes');

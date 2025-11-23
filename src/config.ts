@@ -6,10 +6,13 @@ export const STORAGE_KEY = "space-unicorn-clicker-v2";
 
 export const COMBO_DURATION_MS = 6000;
 export const COMBO_CRIT_CHANCE_PER_STACK = 0.005;
-export const COMBO_CRIT_MULT_PER_TIER = 0.03;
+export const COMBO_CRIT_MULT_PER_TIER = 0.10;
 export const COMBO_CRIT_TIER_SIZE = 10;
 export const COMBO_DPS_PER_STACK = 0.02;
-export const COMBO_MAX_DPS_MULT = 3.0;
+export const COMBO_MAX_DPS_MULT = 5.0;
+
+export const PRESTIGE_RANK_DAMAGE_BONUS = 0.10;      // +10% damage per prestige
+export const PRESTIGE_RANK_CRIT_MULT_BONUS = 0.10;   // +0.1x per prestige
 
 export const UPGRADE_DEFS: UpgradeDef[] = [
     {

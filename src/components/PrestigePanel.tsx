@@ -4,6 +4,7 @@ import { artifactCost, calculatePrestigeGems, getGemMultiplier } from "../logic"
 import { fmt } from "../utils";
 import { ARTIFACT_DEFS } from "../prestige";
 import type { ArtifactDef } from "../prestige";
+import { PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS } from "../config";
 
 interface PrestigePanelProps {
   game: GameSnapshot;
@@ -30,6 +31,20 @@ export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: Pres
             Bonus: +{Math.round((getGemMultiplier(derived.prestigeGems, derived.artifacts?.["gem_polish"] || 0) - 1) * 100)}% Loot & Damage
           </div>
         </div>
+
+        {game.totalPrestiges > 0 && (
+          <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 text-center">
+            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Rank Bonus (Rank {game.totalPrestiges})</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="text-red-300">
+                Damage: +{Math.round(game.totalPrestiges * PRESTIGE_RANK_DAMAGE_BONUS * 100)}%
+              </div>
+              <div className="text-yellow-300">
+                Crit Mult: +{fmt(game.totalPrestiges * PRESTIGE_RANK_CRIT_MULT_BONUS)}x
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
           <div className="text-xs text-slate-400 mb-2 text-center">Prestige to reset progress and gain Gems based on lifetime earnings.</div>

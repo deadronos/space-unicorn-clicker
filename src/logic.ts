@@ -1,5 +1,5 @@
 import { GameSnapshot, Ship, UpgradeDef, UpgradeState } from "./types";
-import { UPGRADE_DEFS, STORAGE_KEY, COMBO_CRIT_CHANCE_PER_STACK, COMBO_CRIT_MULT_PER_TIER, COMBO_CRIT_TIER_SIZE, COMBO_DPS_PER_STACK, COMBO_MAX_DPS_MULT } from "./config";
+import { UPGRADE_DEFS, STORAGE_KEY, COMBO_CRIT_CHANCE_PER_STACK, COMBO_CRIT_MULT_PER_TIER, COMBO_CRIT_TIER_SIZE, COMBO_DPS_PER_STACK, COMBO_MAX_DPS_MULT, PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS } from "./config";
 import { clamp, fmt } from "./utils";
 import { ACHIEVEMENT_DEFS } from "./achievements";
 import { ARTIFACT_DEFS, ArtifactDef } from "./prestige";
@@ -89,6 +89,15 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
     for (const def of ARTIFACT_DEFS) {
         const level = artifacts[def.id] || 0;
         if (level > 0) def.apply(g, level);
+    }
+
+    // Prestige Rank Bonuses (Permanent)
+    const prestiges = base.totalPrestiges || 0;
+    if (prestiges > 0) {
+        const dmgBonus = 1 + (prestiges * PRESTIGE_RANK_DAMAGE_BONUS);
+        g.dps *= dmgBonus;
+        g.clickDamage *= dmgBonus;
+        g.critMult += prestiges * PRESTIGE_RANK_CRIT_MULT_BONUS;
     }
 
     // Combo bonuses

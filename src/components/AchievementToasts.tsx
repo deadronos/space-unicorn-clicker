@@ -13,9 +13,6 @@ export function AchievementToasts({ notifications }: AchievementToastsProps) {
   const prevCount = useRef(0);
 
   useEffect(() => {
-    if (notifications.length > prevCount.current) {
-      try { new Audio('/sfx/achievement_unlock.mp3')?.play(); } catch (e) { }
-    }
     prevCount.current = notifications.length;
   }, [notifications]);
 
