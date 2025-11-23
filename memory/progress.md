@@ -24,6 +24,15 @@
   - **Mocking:** Enhanced `pixi.js` mocks to support class instantiation (`new PIXI.Container()`) for better unit testing.
 - **Stability:** Stabilized the test suite, fixing flaky tests in `ImpactParticles` and ensuring all 38 tests pass reliably.
 
+## 2025-11-23
+
+### Gem Fortune Artifact (TASK011)
+
+- Implemented "Gem Fortune" artifact.
+- **Logic:** When a Lucky Gem drops (from critical hits), the amount is now a random roll between 1 and `max(1, artifactLevel)`.
+- **Cost:** Base 500, Multiplier 2.0.
+- **Verification:** Tests passed (no regressions).
+
 ## 2025-11-21
 
 ### App refactor (TASK009)

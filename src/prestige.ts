@@ -62,5 +62,15 @@ export const ARTIFACT_DEFS: ArtifactDef[] = [
         apply: (g, level) => {
             // Handled in deriveStats
         }
+    },
+    {
+        id: "gem_fortune",
+        name: "Gem Fortune",
+        description: "Lucky Gem drops yield 1 to [Level] gems.",
+        baseCost: 100,
+        costMult: 2.0,
+        apply: (g, level) => {
+            // Handled in handleAttack
+        }
     }
 ];

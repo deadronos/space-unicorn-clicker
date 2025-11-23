@@ -205,9 +205,13 @@ export function useGameController() {
       // Check for lucky prestige gems
       let gemsFound = 0;
       const beamCount = Math.min(prev.unicornCount, UNICORN_CARD_LAYOUT.length);
+      const fortuneLevel = prev.artifacts?.["gem_fortune"] || 0;
+      const maxGems = Math.max(1, fortuneLevel);
+
       for (let i = 0; i < beamCount; i++) {
         if (Math.random() < LUCK_GEM_CHANCE) {
-          gemsFound++;
+          const amount = Math.floor(Math.random() * maxGems) + 1;
+          gemsFound += amount;
         }
       }
 

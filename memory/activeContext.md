@@ -9,6 +9,7 @@ Recent changes
   - Added Lucky Prestige Gems (RNG drops).
   - Added Prestige Rank Bonuses.
   - Added Void Siphon artifact (Passive Stardust).
+  - Added Gem Fortune artifact (Boosts Lucky Gem drops).
   - Fixed passive stardust offline progress and visibility.
 - Implemented comprehensive edge-case tests (TASK010) covering:
   - Core logic (damage, prestige math)
