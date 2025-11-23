@@ -27,7 +27,7 @@ export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: Pres
           <div className="text-3xl font-bold text-purple-400 mb-1">{derived.prestigeGems}</div>
           <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Prestige Gems</div>
           <div className="mt-2 text-xs text-purple-300">
-            Bonus: +{Math.round((getGemMultiplier(derived.prestigeGems, derived.artifacts?.["gem_polish"] || 0) - 1) * 100)}% Loot
+            Bonus: +{Math.round((getGemMultiplier(derived.prestigeGems, derived.artifacts?.["gem_polish"] || 0) - 1) * 100)}% Loot & Damage
           </div>
         </div>
 

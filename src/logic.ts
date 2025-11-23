@@ -114,7 +114,10 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
 
     // Gem multiplier (using Gem Polish artifact if present)
     const polishLevel = artifacts["gem_polish"] || 0;
-    g.lootMultiplier *= getGemMultiplier(g.prestigeGems, polishLevel);
+    const gemMult = getGemMultiplier(g.prestigeGems, polishLevel);
+    g.lootMultiplier *= gemMult;
+    g.dps *= gemMult;
+    g.clickDamage *= gemMult;
 
     return g;
 }
