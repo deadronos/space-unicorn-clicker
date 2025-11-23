@@ -54,6 +54,10 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
             }
         }
     },
+    {
+        id: "titan", name: "⚔️ Titan Bane", desc: "+10% damage to bosses per level", baseCost: 1000, costMult: 1.4,
+        apply: (g) => { const lvl = g.upgrades.titan?.level ?? 0; g.bossDamageMult += 0.1 * lvl; }
+    },
 ];
 
 export const UNICORN_CARD_LAYOUT = Array.from({ length: 5 }, (_, i) => ({

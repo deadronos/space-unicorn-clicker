@@ -58,7 +58,7 @@ export function createEmptyUpgrades(): Record<string, UpgradeState> {
 }
 
 export function deriveStats(base: GameSnapshot): GameSnapshot {
-    const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0 };
+    const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0, bossDamageMult: 1 };
 
     // Apply upgrades
     for (const def of UPGRADE_DEFS) def.apply(g);
@@ -84,7 +84,9 @@ export function applyDamageToShip(
     damage: number,
     lootMultiplier: number,
     currentZone: number,
-    targetGeneratorId?: number // Optional: specific generator to target
+    targetGeneratorId?: number, // Optional: specific generator to target
+    bossDamageMult: number = 1,
+    isClick: boolean = false
 ): { ship: Ship; rewardEarned: number; newZone: number; damageDealt: number; hitShield: boolean } {
     let currentShip = { ...ship, generators: ship.generators?.map(g => ({ ...g })) ?? [] };
     let totalReward = 0;
@@ -108,7 +110,17 @@ export function applyDamageToShip(
         }
 
         if (targetGen) {
-            const dealt = Math.min(targetGen.hp, remaining);
+            // Apply boss damage multiplier if it's a boss
+            let finalDamage = damage;
+            if (ship.isBoss) {
+                finalDamage *= bossDamageMult;
+                // Massive damage bonus for clicking generators on bosses
+                if (isClick) {
+                    finalDamage *= 5;
+                }
+            }
+
+            const dealt = Math.min(targetGen.hp, finalDamage);
             targetGen.hp -= dealt;
             remaining -= dealt; // Excess damage is lost (doesn't spill over to hull or other gens)
             damageDealt += dealt;
@@ -119,7 +131,12 @@ export function applyDamageToShip(
     } else {
         // No shields, damage hull
         while (remaining > 0) {
-            const dealt = Math.min(currentShip.hp, remaining);
+            let finalDamage = remaining;
+            if (ship.isBoss) {
+                finalDamage *= bossDamageMult;
+            }
+
+            const dealt = Math.min(currentShip.hp, finalDamage);
             currentShip.hp -= dealt;
             remaining -= dealt;
             damageDealt += dealt;
@@ -162,6 +179,7 @@ export function createFreshGameState(): GameSnapshot {
         lootMultiplier: 1,
         critChance: 0.02,
         critMult: 3,
+        bossDamageMult: 1,
         ship: shipForLevel(1),
         upgrades: createEmptyUpgrades(),
         autoBuy: true,

@@ -30,7 +30,7 @@ export function hydrateSavedState(): GameSnapshot {
   const seconds = clamp((now - (saved.lastTick || now)) / 1000, 0, 60 * 60 * 8);
   const derived = deriveStats(savedWithUpgrades);
   const dmg = derived.dps * seconds;
-  const { ship, rewardEarned, newZone } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier, saved.zone ?? 0);
+  const { ship, rewardEarned, newZone } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier, saved.zone ?? 0, undefined, derived.bossDamageMult, false);
   const stardust = saved.stardust + rewardEarned;
   const totalEarned = saved.totalEarned + rewardEarned;
 
@@ -178,7 +178,17 @@ export function useGameController() {
         }
       }
 
-      const { ship: newShip, rewardEarned, newZone, damageDealt, hitShield } = applyDamageToShip(prev.ship, damage, derivedStats.lootMultiplier, prev.zone ?? 0, targetGeneratorId);
+
+
+      const { ship: newShip, rewardEarned, newZone, damageDealt, hitShield } = applyDamageToShip(
+        prev.ship,
+        damage,
+        derivedStats.lootMultiplier,
+        prev.zone ?? 0,
+        targetGeneratorId,
+        derivedStats.bossDamageMult,
+        true // isClick
+      );
       const reward = rewardEarned;
 
       spawnHornBeams(isCrit, prev.unicornCount);
@@ -291,7 +301,15 @@ export function useGameController() {
         if (dt < 0.05) return prev;
 
         const damage = derivedStats.dps * dt;
-        const { ship: newShip, rewardEarned, newZone } = applyDamageToShip(prev.ship, damage, derivedStats.lootMultiplier, prev.zone ?? 0);
+        const { ship: newShip, rewardEarned, newZone } = applyDamageToShip(
+          prev.ship,
+          damage,
+          derivedStats.lootMultiplier,
+          prev.zone ?? 0,
+          undefined,
+          derivedStats.bossDamageMult,
+          false // isClick
+        );
 
         const newStats = { ...prev.stats };
         if (!newStats.totalStardust) newStats.totalStardust = prev.totalEarned;
