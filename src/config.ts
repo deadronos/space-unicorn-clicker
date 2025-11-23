@@ -13,6 +13,8 @@ export const COMBO_MAX_DPS_MULT = 5.0;
 
 export const PRESTIGE_RANK_DAMAGE_BONUS = 0.10;      // +10% damage per prestige
 export const PRESTIGE_RANK_CRIT_MULT_BONUS = 0.10;   // +0.1x per prestige
+export const PRESTIGE_RANK_GEM_BONUS = 0.001;        // +0.1% gems per prestige
+export const LUCK_GEM_CHANCE = 0.005;                // 0.5% chance per beam to find a gem
 
 export const UPGRADE_DEFS: UpgradeDef[] = [
     {

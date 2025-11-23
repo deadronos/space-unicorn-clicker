@@ -22,6 +22,17 @@ describe('Prestige Math', () => {
             expect(calculatePrestigeGems(4500000)).toBe(3); // sqrt(9) = 3
             expect(calculatePrestigeGems(50000000)).toBe(10); // sqrt(100) = 10
         });
+
+        it('should apply rank bonus correctly', () => {
+            // Base gems = 10 (from 50,000,000)
+            // Rank 100 => +10% bonus (100 * 0.001 = 0.1)
+            // Total = floor(10 * 1.1) = 11
+            expect(calculatePrestigeGems(50000000, 100)).toBe(11);
+
+            // Rank 1000 => +100% bonus (1000 * 0.001 = 1.0)
+            // Total = floor(10 * 2.0) = 20
+            expect(calculatePrestigeGems(50000000, 1000)).toBe(20);
+        });
     });
 
     describe('getGemMultiplier', () => {

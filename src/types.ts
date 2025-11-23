@@ -39,6 +39,7 @@ export interface GameSnapshot {
     critChance: number;
     critMult: number;
     bossDamageMult: number;
+    passiveStardustPerSecond?: number;
     ship: Ship;
     upgrades: Record<string, UpgradeState>;
     autoBuy: boolean;

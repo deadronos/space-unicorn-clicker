@@ -16,7 +16,7 @@ import {
   loadState,
   saveState
 } from "../logic";
-import { UNICORN_CARD_LAYOUT, UPGRADE_DEFS } from "../config";
+import { UNICORN_CARD_LAYOUT, UPGRADE_DEFS, LUCK_GEM_CHANCE } from "../config";
 import { clamp } from "../utils";
 
 type AttackEvent = React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>;
@@ -198,6 +198,35 @@ export function useGameController() {
 
       spawnHornBeams(isCrit, prev.unicornCount);
 
+      // Check for lucky prestige gems
+      let gemsFound = 0;
+      const beamCount = Math.min(prev.unicornCount, UNICORN_CARD_LAYOUT.length);
+      for (let i = 0; i < beamCount; i++) {
+        if (Math.random() < LUCK_GEM_CHANCE) {
+          gemsFound++;
+        }
+      }
+
+      if (gemsFound > 0) {
+        if (damagePoolRef.current && pixiRef.current) {
+          damagePoolRef.current.spawn(`+${gemsFound} GEM` as any, 1000, {
+            app: pixiRef.current.app,
+            pixiOpts: {
+              x: clientX,
+              y: clientY - 50,
+              style: {
+                fill: 0xec4899,
+                fontSize: 32,
+                fontWeight: 'bold',
+                stroke: 0xffffff,
+                strokeThickness: 4,
+                dropShadow: true
+              }
+            }
+          });
+        }
+      }
+
       if (damagePoolRef.current && pixiRef.current) {
         const val = hitShield && damageDealt === 0 ? "SHIELDED" : damageDealt;
         damagePoolRef.current.spawn(val as any, 800, {
@@ -265,7 +294,8 @@ export function useGameController() {
         comboCount: newCombo,
         comboExpiry: Date.now() + COMBO_DURATION_MS,
         stats: newStats,
-        unicornCount: newUnicornCount
+        unicornCount: newUnicornCount,
+        prestigeGems: (prev.prestigeGems || 0) + gemsFound
       };
 
       const unlocked = checkAchievements(nextState);
@@ -385,7 +415,7 @@ export function useGameController() {
 
   const doPrestige = useCallback(() => {
     setGame(prev => {
-      const gems = calculatePrestigeGems(prev.totalEarned);
+      const gems = calculatePrestigeGems(prev.totalEarned, prev.totalPrestiges);
       if (gems <= 0) return prev;
 
       const fresh = createFreshGameState();

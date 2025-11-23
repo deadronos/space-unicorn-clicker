@@ -4,7 +4,7 @@ import { artifactCost, calculatePrestigeGems, getGemMultiplier } from "../logic"
 import { fmt } from "../utils";
 import { ARTIFACT_DEFS } from "../prestige";
 import type { ArtifactDef } from "../prestige";
-import { PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS } from "../config";
+import { PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS, PRESTIGE_RANK_GEM_BONUS } from "../config";
 
 interface PrestigePanelProps {
   game: GameSnapshot;
@@ -14,7 +14,7 @@ interface PrestigePanelProps {
 }
 
 export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: PrestigePanelProps) {
-  const potentialGems = calculatePrestigeGems(derived.totalEarned);
+  const potentialGems = calculatePrestigeGems(derived.totalEarned, game.totalPrestiges);
 
   return (
     <div className="order-3 lg:order-3 w-full md:w-1/2 lg:w-72 bg-slate-900/90 backdrop-blur-sm border-l border-slate-800 flex flex-col shadow-xl h-96 lg:h-auto">
@@ -41,6 +41,9 @@ export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: Pres
               </div>
               <div className="text-yellow-300">
                 Crit Mult: +{fmt(game.totalPrestiges * PRESTIGE_RANK_CRIT_MULT_BONUS)}x
+              </div>
+              <div className="text-purple-300 col-span-2">
+                Gem Bonus: +{fmt(game.totalPrestiges * PRESTIGE_RANK_GEM_BONUS * 100)}%
               </div>
             </div>
           </div>

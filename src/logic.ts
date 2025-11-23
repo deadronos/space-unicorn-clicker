@@ -1,5 +1,5 @@
 import { GameSnapshot, Ship, UpgradeDef, UpgradeState } from "./types";
-import { UPGRADE_DEFS, STORAGE_KEY, COMBO_CRIT_CHANCE_PER_STACK, COMBO_CRIT_MULT_PER_TIER, COMBO_CRIT_TIER_SIZE, COMBO_DPS_PER_STACK, COMBO_MAX_DPS_MULT, PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS } from "./config";
+import { UPGRADE_DEFS, STORAGE_KEY, COMBO_CRIT_CHANCE_PER_STACK, COMBO_CRIT_MULT_PER_TIER, COMBO_CRIT_TIER_SIZE, COMBO_DPS_PER_STACK, COMBO_MAX_DPS_MULT, PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS, PRESTIGE_RANK_GEM_BONUS } from "./config";
 import { clamp, fmt } from "./utils";
 import { ACHIEVEMENT_DEFS } from "./achievements";
 import { ARTIFACT_DEFS, ArtifactDef } from "./prestige";
@@ -40,8 +40,10 @@ export function loadState(): GameSnapshot | null {
 
 export function saveState(s: GameSnapshot) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { } }
 
-export function calculatePrestigeGems(totalEarned: number): number {
-    return Math.floor(Math.sqrt(totalEarned / 500000));
+export function calculatePrestigeGems(totalEarned: number, totalPrestiges: number = 0): number {
+    const base = Math.floor(Math.sqrt(totalEarned / 500000));
+    const bonus = 1 + (totalPrestiges * PRESTIGE_RANK_GEM_BONUS);
+    return Math.floor(base * bonus);
 }
 
 export function getGemMultiplier(gems: number, polishLevel: number = 0): number {
