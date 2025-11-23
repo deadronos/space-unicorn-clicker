@@ -61,7 +61,7 @@ export default function App() {
       <AchievementToasts notifications={achievementNotifs} />
 
       <div className="relative z-10 flex flex-col h-full">
-        <HeaderBar derived={derived} />
+        <HeaderBar game={game} derived={derived} onImport={setGame} />
         <div className="flex-1 flex flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-hidden">
           <UpgradePanel game={game} onToggleAutoBuy={handleToggleAutoBuy} onPurchase={handleUpgradePurchase} />
           <GameView
