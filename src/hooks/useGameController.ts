@@ -19,7 +19,7 @@ import { clamp } from "../utils";
 
 type AttackEvent = React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>;
 
-function hydrateSavedState(): GameSnapshot {
+export function hydrateSavedState(): GameSnapshot {
   const saved = loadState();
   if (!saved) return createFreshGameState();
 
@@ -35,7 +35,7 @@ function hydrateSavedState(): GameSnapshot {
   const totalEarned = saved.totalEarned + rewardEarned;
 
   const newStats = { ...saved.stats };
-  if (!newStats.totalStardust) newStats.totalStardust = totalEarned;
+  if (newStats.totalStardust === undefined) newStats.totalStardust = saved.totalEarned;
   newStats.totalStardust += rewardEarned;
   if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
