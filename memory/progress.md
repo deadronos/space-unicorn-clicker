@@ -1,5 +1,17 @@
 # Progress Log
 
+## 2025-11-23
+
+### Edge Case Tests (TASK010)
+
+- Implemented a comprehensive suite of edge-case tests to ensure system robustness.
+- **Core Logic:** Added tests for `applyDamage` spillover, `calculatePrestige` math, and `hydrateSavedState`.
+  - **Bug Fix:** Identified and fixed a critical bug in `hydrateSavedState` where `totalEarned` was being added to `currentStardust`, causing double-counting on load.
+- **UI & Hooks:** Added tests for `handleAttack` throttling, `UpgradePanel` exact affordability, and `PrestigePanel` reset logic.
+- **Pixi.js:** Added tests for `BeamPool` reuse/growth, `DamageNumberPool` lifecycle, and `PixiStage` unmount cleanup.
+  - **Mocking:** Enhanced `pixi.js` mocks to support class instantiation (`new PIXI.Container()`) for better unit testing.
+- **Stability:** Stabilized the test suite, fixing flaky tests in `ImpactParticles` and ensuring all 38 tests pass reliably.
+
 ## 2025-11-21
 
 ### App refactor (TASK009)

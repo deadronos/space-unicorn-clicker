@@ -1,21 +1,22 @@
 # Active Context
 
-Current focus: Added Unicorn Squadron upgrade system with dynamic spawning mechanics. Game now features 11 upgrades including the ability to spawn multiple unicorns shooting lasers.
+Current focus: Ensuring system stability and robustness through comprehensive edge-case testing.
 
 Recent changes
 
+- Implemented comprehensive edge-case tests (TASK010) covering:
+  - Core logic (damage, prestige math)
+  - Persistence (save hydration bug fix)
+  - UI interactions (throttling, affordability)
+  - Pixi.js resource management (pooling, cleanup)
+- Stabilized test suite (38 tests passing)
+- Refactored App.tsx into smaller components (TASK009)
 - Implemented Unicorn Squadron upgrade (11th upgrade type)
-- Added unicornCount tracking in GameSnapshot
-- Multiple unicorns render visually (up to 5 shown on screen)
-- Critical hits now have 5% chance to permanently spawn new unicorns
-- Added visual notification for unicorn spawn events
-- Fixed upgrade loading to support new upgrades added after save
-- Prestige preserves unicorn count across resets
-- Each additional unicorn adds +1.5 DPS
-- Previous features: prestige system, visual effects, ship variants, 10 upgrade types
 
 Completed Tasks
 
+- TASK010: Edge Case Tests - Completed 2025-11-23
+- TASK009: Refactor App.tsx - Completed 2025-11-21
 - TASK005: Unicorn Spawning Upgrade - Completed 2025-10-26
 - TASK002: Prestige System - Completed 2025-10-26
 - TASK003: Enhanced Visual Effects - Completed 2025-10-26
