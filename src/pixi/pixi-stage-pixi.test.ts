@@ -2,6 +2,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
+import { act } from 'react';
 import PixiStage from './PixiStage';
 
 describe('PixiStage with PIXI', () => {
@@ -66,8 +67,10 @@ describe('PixiStage with PIXI', () => {
 
     // Use real timers briefly to allow React effects to run and the app to mount
     vi.useRealTimers();
-    root.render(React.createElement(PixiStage, { ref }));
-    await new Promise((r) => setTimeout(r, 10));
+    await act(async () => {
+      root.render(React.createElement(PixiStage, { ref }));
+      await new Promise((r) => setTimeout(r, 10));
+    });
     // switch back to fake timers for deterministic timer control below
     vi.useFakeTimers();
 
@@ -84,7 +87,9 @@ describe('PixiStage with PIXI', () => {
 
     expect(app.stage.children.length).toBe(initialChildren);
 
-    root.unmount();
+    await act(async () => {
+      root.unmount();
+    });
     vi.advanceTimersByTime(0);
   });
 });

@@ -27,3 +27,6 @@ try {
 } catch (e) {
   // ignore environments without HTMLCanvasElement
 }
+
+// Enable React's act() environment
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;

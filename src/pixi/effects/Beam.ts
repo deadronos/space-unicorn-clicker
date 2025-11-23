@@ -20,7 +20,7 @@ export class Beam {
 
     try {
       this._startTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
-      try { console.info && console.info('Beam.play start', { id: this.id, duration }) } catch (e) {}
+      // try { console.info && console.info('Beam.play start', { id: this.id, duration }) } catch (e) {}
     } catch (e) {}
 
     if (this._timer) {
