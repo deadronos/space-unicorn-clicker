@@ -130,6 +130,16 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
     g.dps *= gemMult;
     g.clickDamage *= gemMult;
 
+    // Void Siphon (Passive Stardust)
+    const siphonLevel = artifacts["void_siphon"] || 0;
+    if (siphonLevel > 0) {
+        // 0.1% per level per second of current ship reward
+        // Apply loot multiplier to this as well? Yes, usually passive income scales with loot bonuses.
+        g.passiveStardustPerSecond = g.ship.reward * g.lootMultiplier * (siphonLevel * 0.001);
+    } else {
+        g.passiveStardustPerSecond = 0;
+    }
+
     return g;
 }
 

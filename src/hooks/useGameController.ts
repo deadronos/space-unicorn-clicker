@@ -354,6 +354,9 @@ export function useGameController() {
         const dt = (now - prev.lastTick) / 1000;
         if (dt < 0.05) return prev;
 
+        // Passive Stardust Generation
+        const passiveStardust = (derivedStats.passiveStardustPerSecond || 0) * dt;
+
         const damage = derivedStats.dps * dt;
         const { ship: newShip, rewardEarned, newZone } = applyDamageToShip(
           prev.ship,
@@ -365,16 +368,18 @@ export function useGameController() {
           false // isClick
         );
 
+        const totalReward = rewardEarned + passiveStardust;
+
         const newStats = { ...prev.stats };
         if (!newStats.totalStardust) newStats.totalStardust = prev.totalEarned;
-        newStats.totalStardust += rewardEarned;
+        newStats.totalStardust += totalReward;
         if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
         const nextState: GameSnapshot = {
           ...prev,
           upgrades: nextUpgrades,
-          stardust: nextStardust + rewardEarned,
-          totalEarned: prev.totalEarned + rewardEarned,
+          stardust: nextStardust + totalReward,
+          totalEarned: prev.totalEarned + totalReward,
           ship: newShip,
           zone: newZone,
           lastTick: now,
