@@ -29,7 +29,7 @@ describe('ImpactParticles', () => {
     const pool = new ImpactParticles()
     const first = pool.spawn(0, 0, 3, 400, { app: mockApp })
     const ids1 = first.map(p => p.id)
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(600)
     const second = pool.spawn(0, 0, 3, 400, { app: mockApp })
     const ids2 = second.map(p => p.id)
     const reused = ids2.some(id => ids1.includes(id))

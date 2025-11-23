@@ -76,7 +76,7 @@ export default class BeamGraphic {
         const x1 = opts?.x1 ?? Math.floor(w * 0.75)
         const y1 = opts?.y1 ?? Math.floor(h * 0.5)
 
-        try { console.info && console.info('BeamGraphic: coords', { x0, y0, x1, y1, viewClientWidth: view && (view.clientWidth || view.width), viewClientHeight: view && (view.clientHeight || view.height), opts }); } catch (e) { }
+        // try { console.info && console.info('BeamGraphic: coords', { x0, y0, x1, y1, viewClientWidth: view && (view.clientWidth || view.width), viewClientHeight: view && (view.clientHeight || view.height), opts }); } catch (e) { }
         try { if (this.graphics) (this.graphics as any).__beamDebug = { x0, y0, x1, y1, w, h, opts }; } catch (e) { }
 
         // Draw Glow
