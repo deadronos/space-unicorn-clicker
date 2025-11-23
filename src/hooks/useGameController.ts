@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ImpactParticles } from "../pixi/effects/ImpactParticles";
 import { DamageNumberPool } from "../pixi/effects/DamageNumbers";
 import type { BeamState, GameSnapshot } from "../types";
+import { COMBO_DURATION_MS } from "../config";
 import { ACHIEVEMENT_DEFS } from "../achievements";
 import {
   applyDamageToShip,
   calculatePrestigeGems,
   checkAchievements,
+  applyAchievementRewards,
   costOf,
   createEmptyUpgrades,
   createFreshGameState,
@@ -34,9 +36,9 @@ export function hydrateSavedState(): GameSnapshot {
   const stardust = saved.stardust + rewardEarned;
   const totalEarned = saved.totalEarned + rewardEarned;
 
-  const newStats = { ...saved.stats };
-  // Ensure highestCombo exists on older saves
-  newStats.highestCombo = saved.stats?.highestCombo ?? 0;
+  const newStats = { ...(saved.stats || {}) };
+  // Ensure highestCombo exists on older saves (fallback to saved.comboCount)
+  newStats.highestCombo = saved.stats?.highestCombo ?? saved.comboCount ?? 0;
   if (newStats.totalStardust === undefined) newStats.totalStardust = saved.totalEarned;
   newStats.totalStardust += rewardEarned;
   if (newZone > newStats.highestZone) newStats.highestZone = newZone;
@@ -60,6 +62,7 @@ export function hydrateSavedState(): GameSnapshot {
 
   const unlocked = checkAchievements(newState);
   if (unlocked.length > 0) {
+    applyAchievementRewards(newState, unlocked);
     newState.achievements = [...(newState.achievements || []), ...unlocked];
   }
 
@@ -240,6 +243,8 @@ export function useGameController() {
 
       const newStats = { ...prev.stats };
       newStats.totalClicks = (newStats.totalClicks || 0) + 1;
+      // Track highest combo reached
+      newStats.highestCombo = Math.max(newStats.highestCombo || 0, newCombo);
 
       const nextState: GameSnapshot = {
         ...prev,
@@ -248,13 +253,14 @@ export function useGameController() {
         ship: newShip,
         zone: newZone,
         comboCount: newCombo,
-        comboExpiry: Date.now() + 5000,
+        comboExpiry: Date.now() + COMBO_DURATION_MS,
         stats: newStats,
         unicornCount: newUnicornCount
       };
 
       const unlocked = checkAchievements(nextState);
       if (unlocked.length > 0) {
+        applyAchievementRewards(nextState, unlocked);
         nextState.achievements = [...(nextState.achievements || []), ...unlocked];
         const newNotifs = unlocked.map(id => {
           const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
@@ -264,6 +270,13 @@ export function useGameController() {
         setTimeout(() => {
           setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
         }, 4000);
+        try { if (pixiRef.current && clickZoneRef.current) {
+          const clickRect = clickZoneRef.current.getBoundingClientRect();
+          const cx = clickRect.left + clickRect.width * 0.5;
+          const cy = clickRect.top + clickRect.height * 0.5;
+          pixiRef.current.spawnExplosion(cx, cy);
+        } } catch (e) { }
+        try { new Audio('/sfx/achievement_unlock.mp3')?.play(); } catch (e) { }
       }
 
       return nextState;
@@ -332,7 +345,16 @@ export function useGameController() {
 
         const unlocked = checkAchievements(nextState);
         if (unlocked.length > 0) {
+          applyAchievementRewards(nextState, unlocked);
           nextState.achievements = [...(nextState.achievements || []), ...unlocked];
+          const newNotifs = unlocked.map(id => {
+            const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
+            return { id, name: def?.name || "Unknown" };
+          });
+          setAchievementNotifs(curr => [...curr, ...newNotifs]);
+          setTimeout(() => {
+            setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
+          }, 4000);
         }
 
         saveState(nextState);

@@ -210,6 +210,22 @@ export function checkAchievements(g: GameSnapshot): string[] {
     return newUnlocks;
 }
 
+export function applyAchievementRewards(s: GameSnapshot, ids: string[]) {
+    if (!ids || ids.length === 0) return s;
+    for (const id of ids) {
+        const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
+        if (!def || !def.reward) continue;
+        const r = def.reward;
+        if (r.type === 'stardust') {
+            s.stardust = (s.stardust || 0) + r.amount;
+            s.totalEarned = (s.totalEarned || 0) + r.amount;
+            if (!s.stats) s.stats = { totalStardust: 0, totalClicks: 0, highestCombo: 0, highestZone: 0, totalUnicorns: 0 } as any;
+            s.stats.totalStardust = (s.stats.totalStardust || 0) + r.amount;
+        }
+    }
+    return s;
+}
+
 export function createFreshGameState(): GameSnapshot {
     return {
         stardust: 0,
