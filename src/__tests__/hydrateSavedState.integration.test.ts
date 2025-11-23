@@ -104,4 +104,20 @@ describe('hydrateSavedState - Integration', () => {
         
         expect(hydrated.stats.totalStardust).toBe(hydrated.totalEarned);
     });
+
+    it('should initialize stats.highestCombo to 0 when missing from saved stats', () => {
+        const now = 1000000000;
+        vi.setSystemTime(now);
+
+        const savedState: GameSnapshot = createFreshGameState();
+        // Ensure highestCombo is not present in saved stats to simulate old save
+        // @ts-ignore
+        delete savedState.stats.highestCombo;
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+
+        const hydrated = hydrateSavedState();
+
+        expect((hydrated as any).stats['highestCombo']).toBe(0);
+    });
 });

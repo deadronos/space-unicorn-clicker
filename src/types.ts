@@ -47,6 +47,10 @@ export interface GameSnapshot {
     totalPrestiges: number;
     comboCount: number;
     comboExpiry: number;
+    comboActive?: boolean;
+    comboDpsMult?: number;
+    comboCritChanceBonus?: number;
+    comboCritMultBonus?: number;
     unicornCount: number;
     companionCount: number;
     zone: number;
@@ -55,6 +59,7 @@ export interface GameSnapshot {
     stats: {
         totalStardust: number;
         totalClicks: number;
+        highestCombo: number;
         highestZone: number;
         totalUnicorns: number;
     };

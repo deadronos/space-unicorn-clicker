@@ -1,5 +1,5 @@
 import { GameSnapshot, Ship, UpgradeDef, UpgradeState } from "./types";
-import { UPGRADE_DEFS, STORAGE_KEY } from "./config";
+import { UPGRADE_DEFS, STORAGE_KEY, COMBO_CRIT_CHANCE_PER_STACK, COMBO_CRIT_MULT_PER_TIER, COMBO_CRIT_TIER_SIZE, COMBO_DPS_PER_STACK, COMBO_MAX_DPS_MULT } from "./config";
 import { clamp, fmt } from "./utils";
 import { ACHIEVEMENT_DEFS } from "./achievements";
 import { ARTIFACT_DEFS, ArtifactDef } from "./prestige";
@@ -57,6 +57,27 @@ export function createEmptyUpgrades(): Record<string, UpgradeState> {
     return Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
 }
 
+export function isComboActive(s: GameSnapshot, now: number = Date.now()): boolean {
+    return (s.comboCount ?? 0) > 0 && (s.comboExpiry ?? 0) > now;
+}
+
+export function computeComboCritChanceBonus(comboCount: number): number {
+    const count = Math.max(0, comboCount || 0);
+    return count * COMBO_CRIT_CHANCE_PER_STACK;
+}
+
+export function computeComboCritMultBonus(comboCount: number): number {
+    const count = Math.max(0, comboCount || 0);
+    const tiers = Math.floor(count / COMBO_CRIT_TIER_SIZE);
+    return tiers * COMBO_CRIT_MULT_PER_TIER;
+}
+
+export function computeComboDpsMultiplier(comboCount: number): number {
+    const count = Math.max(0, comboCount || 0);
+    const mult = 1 + count * COMBO_DPS_PER_STACK;
+    return Math.min(mult, COMBO_MAX_DPS_MULT);
+}
+
 export function deriveStats(base: GameSnapshot): GameSnapshot {
     const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0, bossDamageMult: 1 };
 
@@ -68,6 +89,25 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
     for (const def of ARTIFACT_DEFS) {
         const level = artifacts[def.id] || 0;
         if (level > 0) def.apply(g, level);
+    }
+
+    // Combo bonuses
+    const now = Date.now();
+    if (isComboActive(base, now)) {
+        const comboCount = base.comboCount ?? 0;
+        const critChanceBonus = computeComboCritChanceBonus(comboCount);
+        const critMultBonus = computeComboCritMultBonus(comboCount);
+        const dpsMultiplier = computeComboDpsMultiplier(comboCount);
+
+        g.critChance += critChanceBonus;
+        g.critMult += critMultBonus;
+        g.dps *= dpsMultiplier;
+
+        // Derived metadata
+        (g as any).comboActive = true;
+        (g as any).comboDpsMult = dpsMultiplier;
+        (g as any).comboCritChanceBonus = critChanceBonus;
+        (g as any).comboCritMultBonus = critMultBonus;
     }
 
     g.critChance = clamp(g.critChance, 0, 0.8);
@@ -196,6 +236,7 @@ export function createFreshGameState(): GameSnapshot {
         stats: {
             totalStardust: 0,
             totalClicks: 0,
+            highestCombo: 0,
             highestZone: 0,
             totalUnicorns: 1
         }

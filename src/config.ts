@@ -4,6 +4,13 @@ export const UNICORN_IMG = (import.meta as any).env?.BASE_URL ? `${(import.meta 
 
 export const STORAGE_KEY = "space-unicorn-clicker-v2";
 
+export const COMBO_DURATION_MS = 6000;
+export const COMBO_CRIT_CHANCE_PER_STACK = 0.005;
+export const COMBO_CRIT_MULT_PER_TIER = 0.03;
+export const COMBO_CRIT_TIER_SIZE = 10;
+export const COMBO_DPS_PER_STACK = 0.02;
+export const COMBO_MAX_DPS_MULT = 3.0;
+
 export const UPGRADE_DEFS: UpgradeDef[] = [
     {
         id: "horn", name: "🔥 Horn Laser", desc: "+1 click damage (scales)", baseCost: 10, costMult: 1.15,

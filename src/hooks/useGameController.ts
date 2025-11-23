@@ -35,6 +35,8 @@ export function hydrateSavedState(): GameSnapshot {
   const totalEarned = saved.totalEarned + rewardEarned;
 
   const newStats = { ...saved.stats };
+  // Ensure highestCombo exists on older saves
+  newStats.highestCombo = saved.stats?.highestCombo ?? 0;
   if (newStats.totalStardust === undefined) newStats.totalStardust = saved.totalEarned;
   newStats.totalStardust += rewardEarned;
   if (newZone > newStats.highestZone) newStats.highestZone = newZone;
