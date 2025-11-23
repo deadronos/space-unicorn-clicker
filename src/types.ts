@@ -38,6 +38,7 @@ export interface GameSnapshot {
     lootMultiplier: number;
     critChance: number;
     critMult: number;
+    bossDamageMult: number;
     ship: Ship;
     upgrades: Record<string, UpgradeState>;
     autoBuy: boolean;
