@@ -1,5 +1,17 @@
 # Progress Log
 
+## 2025-11-24
+
+### Prestige & Artifact Enhancements (TASK002 Follow-up)
+
+- **Audio Removal:** Removed audio system completely due to persistent 404/NotSupported errors.
+- **Lucky Prestige Gems:** Implemented RNG mechanic where critical hits have a chance to drop prestige gems directly.
+- **Prestige Rank Bonuses:** Added permanent bonuses based on total prestige count (Damage, Crit Mult, Gem Bonus).
+- **Void Siphon Artifact:** Implemented "Void Siphon" artifact for passive stardust generation (0.1% of ship reward/sec/level).
+  - **Fix:** Corrected offline progress calculation to include passive stardust.
+  - **UX:** Improved number formatting (`fmt`) to show decimals for small numbers (<1000), making slow passive generation visible.
+- **Verification:** Added unit tests for `deriveStats` passive generation logic and verified fix.
+
 ## 2025-11-23
 
 ### Edge Case Tests (TASK010)

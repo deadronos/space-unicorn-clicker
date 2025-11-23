@@ -33,14 +33,18 @@ export function hydrateSavedState(): GameSnapshot {
   const derived = deriveStats(savedWithUpgrades);
   const dmg = derived.dps * seconds;
   const { ship, rewardEarned, newZone } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier, saved.zone ?? 0, undefined, derived.bossDamageMult, false);
-  const stardust = saved.stardust + rewardEarned;
-  const totalEarned = saved.totalEarned + rewardEarned;
+  
+  const passiveStardust = (derived.passiveStardustPerSecond || 0) * seconds;
+  const totalReward = rewardEarned + passiveStardust;
+
+  const stardust = saved.stardust + totalReward;
+  const totalEarned = saved.totalEarned + totalReward;
 
   const newStats = { ...(saved.stats || {}) };
   // Ensure highestCombo exists on older saves (fallback to saved.comboCount)
   newStats.highestCombo = saved.stats?.highestCombo ?? saved.comboCount ?? 0;
   if (newStats.totalStardust === undefined) newStats.totalStardust = saved.totalEarned;
-  newStats.totalStardust += rewardEarned;
+  newStats.totalStardust += totalReward;
   if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
   const newState: GameSnapshot = {
@@ -356,7 +360,7 @@ export function useGameController() {
 
         // Passive Stardust Generation
         const passiveStardust = (derivedStats.passiveStardustPerSecond || 0) * dt;
-
+        
         const damage = derivedStats.dps * dt;
         const { ship: newShip, rewardEarned, newZone } = applyDamageToShip(
           prev.ship,

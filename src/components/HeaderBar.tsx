@@ -86,6 +86,11 @@ export function HeaderBar({ game, derived, onImport }: HeaderBarProps) {
         <div className="text-right">
           <div className="text-lg">
             Stardust: <span className="font-bold">{fmt(derived.stardust)}</span>
+            {derived.passiveStardustPerSecond && derived.passiveStardustPerSecond > 0 ? (
+              <span className="text-xs text-purple-300 ml-2">
+                (+{fmt(derived.passiveStardustPerSecond)}/s)
+              </span>
+            ) : null}
           </div>
           <div className="text-sm text-slate-300">
             DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance > 0 ? `• Crit ${Math.round(derived.critChance * 100)}% x${derived.critMult.toFixed(1)}` : ""}
