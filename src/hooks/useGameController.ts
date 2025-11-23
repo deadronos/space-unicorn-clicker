@@ -252,6 +252,7 @@ export function useGameController() {
         try {
           if (pixiRef.current) {
             pixiRef.current.spawnImpact({ x: clientX, y: clientY, color: 0x06b6d4, radius: 6, count: 3 });
+            try { pixiRef.current.spawnComboBurst(clientX, clientY, { count: 8, colors: [0x06b6d4, 0x60a5fa], maxLife: 360 }); } catch (e) { }
           }
         } catch (e) { }
       }
