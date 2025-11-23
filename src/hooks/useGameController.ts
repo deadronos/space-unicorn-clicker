@@ -246,6 +246,16 @@ export function useGameController() {
       // Track highest combo reached
       newStats.highestCombo = Math.max(newStats.highestCombo || 0, newCombo);
 
+      // Play a subtle combo chime and spawn a small combo visual when combo increments
+      if (newCombo > prev.comboCount) {
+        try { new Audio('/sfx/combo_chime.mp3')?.play(); } catch (e) { }
+        try {
+          if (pixiRef.current) {
+            pixiRef.current.spawnImpact({ x: clientX, y: clientY, color: 0x06b6d4, radius: 6, count: 3 });
+          }
+        } catch (e) { }
+      }
+
       const nextState: GameSnapshot = {
         ...prev,
         stardust: prev.stardust + reward,
