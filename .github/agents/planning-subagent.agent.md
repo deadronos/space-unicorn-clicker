@@ -1,7 +1,7 @@
 ---
 description: Research context and return findings to parent agent
 argument-hint: Research goal or problem statement
-tools: ['sequentialthinking/*', 'upstash/context7/*', 'search', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo']
+tools: ['launch/testFailure', 'read/readFile', 'search', 'web', 'sequentialthinking/*', 'upstash/context7/*']
 model: gpt-5-mini
 ---
 You are a PLANNING SUBAGENT called by a parent CONDUCTOR agent.

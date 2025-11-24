@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ImpactParticles } from "../pixi/effects/ImpactParticles";
 import { DamageNumberPool } from "../pixi/effects/DamageNumbers";
 import type { BeamState, GameSnapshot } from "../types";
+import { COMBO_DURATION_MS } from "../config";
 import { ACHIEVEMENT_DEFS } from "../achievements";
 import {
   applyDamageToShip,
   calculatePrestigeGems,
   checkAchievements,
+  applyAchievementRewards,
   costOf,
   createEmptyUpgrades,
   createFreshGameState,
@@ -14,7 +16,7 @@ import {
   loadState,
   saveState
 } from "../logic";
-import { UNICORN_CARD_LAYOUT, UPGRADE_DEFS } from "../config";
+import { UNICORN_CARD_LAYOUT, UPGRADE_DEFS, LUCK_GEM_CHANCE } from "../config";
 import { clamp } from "../utils";
 
 type AttackEvent = React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>;
@@ -31,12 +33,18 @@ export function hydrateSavedState(): GameSnapshot {
   const derived = deriveStats(savedWithUpgrades);
   const dmg = derived.dps * seconds;
   const { ship, rewardEarned, newZone } = applyDamageToShip(saved.ship, dmg, derived.lootMultiplier, saved.zone ?? 0, undefined, derived.bossDamageMult, false);
-  const stardust = saved.stardust + rewardEarned;
-  const totalEarned = saved.totalEarned + rewardEarned;
+  
+  const passiveStardust = (derived.passiveStardustPerSecond || 0) * seconds;
+  const totalReward = rewardEarned + passiveStardust;
 
-  const newStats = { ...saved.stats };
+  const stardust = saved.stardust + totalReward;
+  const totalEarned = saved.totalEarned + totalReward;
+
+  const newStats = { ...(saved.stats || {}) };
+  // Ensure highestCombo exists on older saves (fallback to saved.comboCount)
+  newStats.highestCombo = saved.stats?.highestCombo ?? saved.comboCount ?? 0;
   if (newStats.totalStardust === undefined) newStats.totalStardust = saved.totalEarned;
-  newStats.totalStardust += rewardEarned;
+  newStats.totalStardust += totalReward;
   if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
   const newState: GameSnapshot = {
@@ -58,6 +66,7 @@ export function hydrateSavedState(): GameSnapshot {
 
   const unlocked = checkAchievements(newState);
   if (unlocked.length > 0) {
+    applyAchievementRewards(newState, unlocked);
     newState.achievements = [...(newState.achievements || []), ...unlocked];
   }
 
@@ -193,6 +202,39 @@ export function useGameController() {
 
       spawnHornBeams(isCrit, prev.unicornCount);
 
+      // Check for lucky prestige gems
+      let gemsFound = 0;
+      const beamCount = Math.min(prev.unicornCount, UNICORN_CARD_LAYOUT.length);
+      const fortuneLevel = prev.artifacts?.["gem_fortune"] || 0;
+      const maxGems = Math.max(1, fortuneLevel);
+
+      for (let i = 0; i < beamCount; i++) {
+        if (Math.random() < LUCK_GEM_CHANCE) {
+          const amount = Math.floor(Math.random() * maxGems) + 1;
+          gemsFound += amount;
+        }
+      }
+
+      if (gemsFound > 0) {
+        if (damagePoolRef.current && pixiRef.current) {
+          damagePoolRef.current.spawn(`+${gemsFound} GEM` as any, 1000, {
+            app: pixiRef.current.app,
+            pixiOpts: {
+              x: clientX,
+              y: clientY - 50,
+              style: {
+                fill: 0xec4899,
+                fontSize: 32,
+                fontWeight: 'bold',
+                stroke: 0xffffff,
+                strokeThickness: 4,
+                dropShadow: true
+              }
+            }
+          });
+        }
+      }
+
       if (damagePoolRef.current && pixiRef.current) {
         const val = hitShield && damageDealt === 0 ? "SHIELDED" : damageDealt;
         damagePoolRef.current.spawn(val as any, 800, {
@@ -238,6 +280,18 @@ export function useGameController() {
 
       const newStats = { ...prev.stats };
       newStats.totalClicks = (newStats.totalClicks || 0) + 1;
+      // Track highest combo reached
+      newStats.highestCombo = Math.max(newStats.highestCombo || 0, newCombo);
+
+      // Play a subtle combo chime and spawn a small combo visual when combo increments
+      if (newCombo > prev.comboCount) {
+        try {
+          if (pixiRef.current) {
+            pixiRef.current.spawnImpact({ x: clientX, y: clientY, color: 0x06b6d4, radius: 6, count: 3 });
+            try { pixiRef.current.spawnComboBurst(clientX, clientY, { count: 8, colors: [0x06b6d4, 0x60a5fa], maxLife: 360 }); } catch (e) { }
+          }
+        } catch (e) { }
+      }
 
       const nextState: GameSnapshot = {
         ...prev,
@@ -246,13 +300,15 @@ export function useGameController() {
         ship: newShip,
         zone: newZone,
         comboCount: newCombo,
-        comboExpiry: Date.now() + 5000,
+        comboExpiry: Date.now() + COMBO_DURATION_MS,
         stats: newStats,
-        unicornCount: newUnicornCount
+        unicornCount: newUnicornCount,
+        prestigeGems: (prev.prestigeGems || 0) + gemsFound
       };
 
       const unlocked = checkAchievements(nextState);
       if (unlocked.length > 0) {
+        applyAchievementRewards(nextState, unlocked);
         nextState.achievements = [...(nextState.achievements || []), ...unlocked];
         const newNotifs = unlocked.map(id => {
           const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
@@ -262,6 +318,12 @@ export function useGameController() {
         setTimeout(() => {
           setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
         }, 4000);
+        try { if (pixiRef.current && clickZoneRef.current) {
+          const clickRect = clickZoneRef.current.getBoundingClientRect();
+          const cx = clickRect.left + clickRect.width * 0.5;
+          const cy = clickRect.top + clickRect.height * 0.5;
+          pixiRef.current.spawnExplosion(cx, cy);
+        } } catch (e) { }
       }
 
       return nextState;
@@ -300,6 +362,9 @@ export function useGameController() {
         const dt = (now - prev.lastTick) / 1000;
         if (dt < 0.05) return prev;
 
+        // Passive Stardust Generation
+        const passiveStardust = (derivedStats.passiveStardustPerSecond || 0) * dt;
+        
         const damage = derivedStats.dps * dt;
         const { ship: newShip, rewardEarned, newZone } = applyDamageToShip(
           prev.ship,
@@ -311,16 +376,18 @@ export function useGameController() {
           false // isClick
         );
 
+        const totalReward = rewardEarned + passiveStardust;
+
         const newStats = { ...prev.stats };
         if (!newStats.totalStardust) newStats.totalStardust = prev.totalEarned;
-        newStats.totalStardust += rewardEarned;
+        newStats.totalStardust += totalReward;
         if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
         const nextState: GameSnapshot = {
           ...prev,
           upgrades: nextUpgrades,
-          stardust: nextStardust + rewardEarned,
-          totalEarned: prev.totalEarned + rewardEarned,
+          stardust: nextStardust + totalReward,
+          totalEarned: prev.totalEarned + totalReward,
           ship: newShip,
           zone: newZone,
           lastTick: now,
@@ -330,7 +397,16 @@ export function useGameController() {
 
         const unlocked = checkAchievements(nextState);
         if (unlocked.length > 0) {
+          applyAchievementRewards(nextState, unlocked);
           nextState.achievements = [...(nextState.achievements || []), ...unlocked];
+          const newNotifs = unlocked.map(id => {
+            const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
+            return { id, name: def?.name || "Unknown" };
+          });
+          setAchievementNotifs(curr => [...curr, ...newNotifs]);
+          setTimeout(() => {
+            setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
+          }, 4000);
         }
 
         saveState(nextState);
@@ -352,7 +428,7 @@ export function useGameController() {
 
   const doPrestige = useCallback(() => {
     setGame(prev => {
-      const gems = calculatePrestigeGems(prev.totalEarned);
+      const gems = calculatePrestigeGems(prev.totalEarned, prev.totalPrestiges);
       if (gems <= 0) return prev;
 
       const fresh = createFreshGameState();

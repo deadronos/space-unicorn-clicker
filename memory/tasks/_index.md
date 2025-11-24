@@ -3,6 +3,7 @@
 ## In Progress
 
 - [TASK001] Create tests for deriveStats and costOf — In Progress 2025-10-22
+- [TASK011] Gem Fortune Artifact — In Progress 2025-11-23
 
 
 ## Pending

@@ -4,6 +4,18 @@ export const UNICORN_IMG = (import.meta as any).env?.BASE_URL ? `${(import.meta 
 
 export const STORAGE_KEY = "space-unicorn-clicker-v2";
 
+export const COMBO_DURATION_MS = 6000;
+export const COMBO_CRIT_CHANCE_PER_STACK = 0.005;
+export const COMBO_CRIT_MULT_PER_TIER = 0.10;
+export const COMBO_CRIT_TIER_SIZE = 10;
+export const COMBO_DPS_PER_STACK = 0.02;
+export const COMBO_MAX_DPS_MULT = 5.0;
+
+export const PRESTIGE_RANK_DAMAGE_BONUS = 0.10;      // +10% damage per prestige
+export const PRESTIGE_RANK_CRIT_MULT_BONUS = 0.10;   // +0.1x per prestige
+export const PRESTIGE_RANK_GEM_BONUS = 0.001;        // +0.1% gems per prestige
+export const LUCK_GEM_CHANCE = 0.005;                // 0.5% chance per beam to find a gem
+
 export const UPGRADE_DEFS: UpgradeDef[] = [
     {
         id: "horn", name: "🔥 Horn Laser", desc: "+1 click damage (scales)", baseCost: 10, costMult: 1.15,

@@ -4,6 +4,13 @@ Current focus: Ensuring system stability and robustness through comprehensive ed
 
 Recent changes
 
+- **Prestige & Artifacts:**
+  - Removed audio system.
+  - Added Lucky Prestige Gems (RNG drops).
+  - Added Prestige Rank Bonuses.
+  - Added Void Siphon artifact (Passive Stardust).
+  - Added Gem Fortune artifact (Boosts Lucky Gem drops).
+  - Fixed passive stardust offline progress and visibility.
 - Implemented comprehensive edge-case tests (TASK010) covering:
   - Core logic (damage, prestige math)
   - Persistence (save hydration bug fix)
@@ -26,10 +33,11 @@ Next steps
 
 - Monitor for any bugs or balance issues with unicorn spawning
 - Consider future enhancements based on user feedback
-- Potential additions: sound effects, more particle types, additional mechanics
+- Potential additions: more particle types, additional mechanics
 
 Notes
 
+- Passive Stardust: Visible now with 1 decimal place for small numbers.
 - Unicorn Squadron upgrade: baseCost 5000, costMult 1.45
 - Crit-based spawn chance is 5% per critical hit
 - Visual rendering supports up to 5 unicorns with staggered positioning

@@ -9,11 +9,13 @@ import * as PIXI from 'pixi.js';
 
 import { Starfield } from './display/Starfield';
 import { ExplosionPool } from './display/ExplosionGraphic';
+import { ComboBurstPool } from './display/ComboBurstGraphic';
 
 type PixiStageHandle = {
   spawnBeam: (opts?: any) => void;
   spawnImpact: (opts?: any) => void;
   spawnExplosion: (x: number, y: number) => void;
+  spawnComboBurst: (x: number, y: number, opts?: any) => void;
   app: PIXI.Application | null;
 };
 
@@ -34,6 +36,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
   // ... inside PixiStage ...
   const backgroundRef = useRef<Starfield | null>(null);
   const explosionPoolRef = useRef<ExplosionPool | null>(null);
+  const comboBurstRef = useRef<ComboBurstPool | null>(null);
 
   useLayoutEffect(() => {
     let mounted = true;
@@ -52,6 +55,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
 
       backgroundRef.current = new Starfield(app);
       explosionPoolRef.current = new ExplosionPool(app.stage);
+      comboBurstRef.current = new ComboBurstPool(app.stage);
 
       try {
         const canvas = (app.canvas ?? app.view) as HTMLCanvasElement;
@@ -77,6 +81,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
         app.ticker.add((delta: number) => {
           backgroundRef.current?.update(delta);
           explosionPoolRef.current?.tick(delta * 16); // Convert to ms
+          comboBurstRef.current?.tick(delta * 16);
 
           const unicornCenter = new PIXI.Point(app.screen.width * 0.85, app.screen.height * 0.5);
           activeCompanionsRef.current.forEach((companion, i) => {
@@ -178,6 +183,9 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
     },
     spawnExplosion(x: number, y: number) {
       explosionPoolRef.current?.spawn(x, y);
+    },
+    spawnComboBurst(x: number, y: number, opts?: any) {
+      comboBurstRef.current?.spawn(x, y, opts);
     },
     get app() {
       return appRef.current;

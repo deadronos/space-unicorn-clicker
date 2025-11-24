@@ -1,7 +1,7 @@
 ---
 description: 'Execute implementation tasks delegated by the CONDUCTOR agent.'
-tools: ['runCommands', 'runTasks', 'sequentialthinking/*', 'edit', 'search', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos']
-model: gpt-5-mini
+tools: ['launch/testFailure', 'launch/runTask', 'launch/getTaskOutput', 'launch/createAndRunTask', 'edit', 'read/readFile', 'search', 'web', 'shell', 'sequentialthinking/*', 'todo']
+model: 'gpt-5-mini'
 ---
 You are an IMPLEMENTATION SUBAGENT. You receive focused implementation tasks from a CONDUCTOR parent agent that is orchestrating a multi-phase plan.
 

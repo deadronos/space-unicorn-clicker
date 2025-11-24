@@ -52,5 +52,25 @@ export const ARTIFACT_DEFS: ArtifactDef[] = [
         apply: (g, level) => {
             g.dps *= (1 + 0.1 * level);
         }
+    },
+    {
+        id: "void_siphon",
+        name: "Void Siphon",
+        description: "Gain 0.1% of current enemy drop value per second.",
+        baseCost: 100,
+        costMult: 1.5,
+        apply: (g, level) => {
+            // Handled in deriveStats
+        }
+    },
+    {
+        id: "gem_fortune",
+        name: "Gem Fortune",
+        description: "Lucky Gem drops yield 1 to [Level] gems.",
+        baseCost: 100,
+        costMult: 2.0,
+        apply: (g, level) => {
+            // Handled in handleAttack
+        }
     }
 ];

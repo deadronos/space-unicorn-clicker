@@ -1,5 +1,5 @@
 import { GameSnapshot, Ship, UpgradeDef, UpgradeState } from "./types";
-import { UPGRADE_DEFS, STORAGE_KEY } from "./config";
+import { UPGRADE_DEFS, STORAGE_KEY, COMBO_CRIT_CHANCE_PER_STACK, COMBO_CRIT_MULT_PER_TIER, COMBO_CRIT_TIER_SIZE, COMBO_DPS_PER_STACK, COMBO_MAX_DPS_MULT, PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS, PRESTIGE_RANK_GEM_BONUS } from "./config";
 import { clamp, fmt } from "./utils";
 import { ACHIEVEMENT_DEFS } from "./achievements";
 import { ARTIFACT_DEFS, ArtifactDef } from "./prestige";
@@ -40,8 +40,10 @@ export function loadState(): GameSnapshot | null {
 
 export function saveState(s: GameSnapshot) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { } }
 
-export function calculatePrestigeGems(totalEarned: number): number {
-    return Math.floor(Math.sqrt(totalEarned / 500000));
+export function calculatePrestigeGems(totalEarned: number, totalPrestiges: number = 0): number {
+    const base = Math.floor(Math.sqrt(totalEarned / 500000));
+    const bonus = 1 + (totalPrestiges * PRESTIGE_RANK_GEM_BONUS);
+    return Math.floor(base * bonus);
 }
 
 export function getGemMultiplier(gems: number, polishLevel: number = 0): number {
@@ -57,6 +59,27 @@ export function createEmptyUpgrades(): Record<string, UpgradeState> {
     return Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
 }
 
+export function isComboActive(s: GameSnapshot, now: number = Date.now()): boolean {
+    return (s.comboCount ?? 0) > 0 && (s.comboExpiry ?? 0) > now;
+}
+
+export function computeComboCritChanceBonus(comboCount: number): number {
+    const count = Math.max(0, comboCount || 0);
+    return count * COMBO_CRIT_CHANCE_PER_STACK;
+}
+
+export function computeComboCritMultBonus(comboCount: number): number {
+    const count = Math.max(0, comboCount || 0);
+    const tiers = Math.floor(count / COMBO_CRIT_TIER_SIZE);
+    return tiers * COMBO_CRIT_MULT_PER_TIER;
+}
+
+export function computeComboDpsMultiplier(comboCount: number): number {
+    const count = Math.max(0, comboCount || 0);
+    const mult = 1 + count * COMBO_DPS_PER_STACK;
+    return Math.min(mult, COMBO_MAX_DPS_MULT);
+}
+
 export function deriveStats(base: GameSnapshot): GameSnapshot {
     const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0, bossDamageMult: 1 };
 
@@ -70,11 +93,52 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
         if (level > 0) def.apply(g, level);
     }
 
+    // Prestige Rank Bonuses (Permanent)
+    const prestiges = base.totalPrestiges || 0;
+    if (prestiges > 0) {
+        const dmgBonus = 1 + (prestiges * PRESTIGE_RANK_DAMAGE_BONUS);
+        g.dps *= dmgBonus;
+        g.clickDamage *= dmgBonus;
+        g.critMult += prestiges * PRESTIGE_RANK_CRIT_MULT_BONUS;
+    }
+
+    // Combo bonuses
+    const now = Date.now();
+    if (isComboActive(base, now)) {
+        const comboCount = base.comboCount ?? 0;
+        const critChanceBonus = computeComboCritChanceBonus(comboCount);
+        const critMultBonus = computeComboCritMultBonus(comboCount);
+        const dpsMultiplier = computeComboDpsMultiplier(comboCount);
+
+        g.critChance += critChanceBonus;
+        g.critMult += critMultBonus;
+        g.dps *= dpsMultiplier;
+
+        // Derived metadata
+        (g as any).comboActive = true;
+        (g as any).comboDpsMult = dpsMultiplier;
+        (g as any).comboCritChanceBonus = critChanceBonus;
+        (g as any).comboCritMultBonus = critMultBonus;
+    }
+
     g.critChance = clamp(g.critChance, 0, 0.8);
 
     // Gem multiplier (using Gem Polish artifact if present)
     const polishLevel = artifacts["gem_polish"] || 0;
-    g.lootMultiplier *= getGemMultiplier(g.prestigeGems, polishLevel);
+    const gemMult = getGemMultiplier(g.prestigeGems, polishLevel);
+    g.lootMultiplier *= gemMult;
+    g.dps *= gemMult;
+    g.clickDamage *= gemMult;
+
+    // Void Siphon (Passive Stardust)
+    const siphonLevel = artifacts["void_siphon"] || 0;
+    if (siphonLevel > 0) {
+        // 0.1% per level per second of current ship reward
+        // Apply loot multiplier to this as well? Yes, usually passive income scales with loot bonuses.
+        g.passiveStardustPerSecond = g.ship.reward * g.lootMultiplier * (siphonLevel * 0.001);
+    } else {
+        g.passiveStardustPerSecond = 0;
+    }
 
     return g;
 }
@@ -170,6 +234,22 @@ export function checkAchievements(g: GameSnapshot): string[] {
     return newUnlocks;
 }
 
+export function applyAchievementRewards(s: GameSnapshot, ids: string[]) {
+    if (!ids || ids.length === 0) return s;
+    for (const id of ids) {
+        const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
+        if (!def || !def.reward) continue;
+        const r = def.reward;
+        if (r.type === 'stardust') {
+            s.stardust = (s.stardust || 0) + r.amount;
+            s.totalEarned = (s.totalEarned || 0) + r.amount;
+            if (!s.stats) s.stats = { totalStardust: 0, totalClicks: 0, highestCombo: 0, highestZone: 0, totalUnicorns: 0 } as any;
+            s.stats.totalStardust = (s.stats.totalStardust || 0) + r.amount;
+        }
+    }
+    return s;
+}
+
 export function createFreshGameState(): GameSnapshot {
     return {
         stardust: 0,
@@ -196,6 +276,7 @@ export function createFreshGameState(): GameSnapshot {
         stats: {
             totalStardust: 0,
             totalClicks: 0,
+            highestCombo: 0,
             highestZone: 0,
             totalUnicorns: 1
         }

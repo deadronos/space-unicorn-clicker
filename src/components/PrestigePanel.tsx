@@ -4,6 +4,7 @@ import { artifactCost, calculatePrestigeGems, getGemMultiplier } from "../logic"
 import { fmt } from "../utils";
 import { ARTIFACT_DEFS } from "../prestige";
 import type { ArtifactDef } from "../prestige";
+import { PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS, PRESTIGE_RANK_GEM_BONUS } from "../config";
 
 interface PrestigePanelProps {
   game: GameSnapshot;
@@ -13,7 +14,7 @@ interface PrestigePanelProps {
 }
 
 export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: PrestigePanelProps) {
-  const potentialGems = calculatePrestigeGems(derived.totalEarned);
+  const potentialGems = calculatePrestigeGems(derived.totalEarned, game.totalPrestiges);
 
   return (
     <div className="order-3 lg:order-3 w-full md:w-1/2 lg:w-72 bg-slate-900/90 backdrop-blur-sm border-l border-slate-800 flex flex-col shadow-xl h-96 lg:h-auto">
@@ -27,9 +28,26 @@ export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: Pres
           <div className="text-3xl font-bold text-purple-400 mb-1">{derived.prestigeGems}</div>
           <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Prestige Gems</div>
           <div className="mt-2 text-xs text-purple-300">
-            Bonus: +{Math.round((getGemMultiplier(derived.prestigeGems, derived.artifacts?.["gem_polish"] || 0) - 1) * 100)}% Loot
+            Bonus: +{Math.round((getGemMultiplier(derived.prestigeGems, derived.artifacts?.["gem_polish"] || 0) - 1) * 100)}% Loot & Damage
           </div>
         </div>
+
+        {game.totalPrestiges > 0 && (
+          <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 text-center">
+            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Rank Bonus (Rank {game.totalPrestiges})</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="text-red-300">
+                Damage: +{Math.round(game.totalPrestiges * PRESTIGE_RANK_DAMAGE_BONUS * 100)}%
+              </div>
+              <div className="text-yellow-300">
+                Crit Mult: +{fmt(game.totalPrestiges * PRESTIGE_RANK_CRIT_MULT_BONUS)}x
+              </div>
+              <div className="text-purple-300 col-span-2">
+                Gem Bonus: +{fmt(game.totalPrestiges * PRESTIGE_RANK_GEM_BONUS * 100)}%
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
           <div className="text-xs text-slate-400 mb-2 text-center">Prestige to reset progress and gain Gems based on lifetime earnings.</div>

@@ -86,6 +86,11 @@ export function HeaderBar({ game, derived, onImport }: HeaderBarProps) {
         <div className="text-right">
           <div className="text-lg">
             Stardust: <span className="font-bold">{fmt(derived.stardust)}</span>
+            {derived.passiveStardustPerSecond && derived.passiveStardustPerSecond > 0 ? (
+              <span className="text-xs text-purple-300 ml-2">
+                (+{fmt(derived.passiveStardustPerSecond)}/s)
+              </span>
+            ) : null}
           </div>
           <div className="text-sm text-slate-300">
             DPS: {derived.dps.toFixed(1)} • Click: {derived.clickDamage.toFixed(1)} {derived.critChance > 0 ? `• Crit ${Math.round(derived.critChance * 100)}% x${derived.critMult.toFixed(1)}` : ""}
@@ -93,6 +98,12 @@ export function HeaderBar({ game, derived, onImport }: HeaderBarProps) {
           <div className="text-sm text-slate-400">Total Earned: {fmt(derived.totalEarned)}</div>
           <div className="text-xs text-purple-400 mt-1">
             🦄 Unicorns: {derived.unicornCount} {derived.comboCount > 1 ? `• Combo: ${derived.comboCount}x` : ""}
+            {((derived as any).comboActive) ? (
+              <span className="text-teal-300 ml-2">
+                • Momentum: +{Math.round(((derived as any).comboDpsMult - 1) * 100)}% DPS
+                {game.comboExpiry && game.comboExpiry > Date.now() ? ` (${Math.ceil((game.comboExpiry - Date.now()) / 1000)}s)` : ""}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

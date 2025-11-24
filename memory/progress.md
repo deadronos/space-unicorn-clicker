@@ -1,5 +1,17 @@
 # Progress Log
 
+## 2025-11-24
+
+### Prestige & Artifact Enhancements (TASK002 Follow-up)
+
+- **Audio Removal:** Removed audio system completely due to persistent 404/NotSupported errors.
+- **Lucky Prestige Gems:** Implemented RNG mechanic where critical hits have a chance to drop prestige gems directly.
+- **Prestige Rank Bonuses:** Added permanent bonuses based on total prestige count (Damage, Crit Mult, Gem Bonus).
+- **Void Siphon Artifact:** Implemented "Void Siphon" artifact for passive stardust generation (0.1% of ship reward/sec/level).
+  - **Fix:** Corrected offline progress calculation to include passive stardust.
+  - **UX:** Improved number formatting (`fmt`) to show decimals for small numbers (<1000), making slow passive generation visible.
+- **Verification:** Added unit tests for `deriveStats` passive generation logic and verified fix.
+
 ## 2025-11-23
 
 ### Edge Case Tests (TASK010)
@@ -11,6 +23,15 @@
 - **Pixi.js:** Added tests for `BeamPool` reuse/growth, `DamageNumberPool` lifecycle, and `PixiStage` unmount cleanup.
   - **Mocking:** Enhanced `pixi.js` mocks to support class instantiation (`new PIXI.Container()`) for better unit testing.
 - **Stability:** Stabilized the test suite, fixing flaky tests in `ImpactParticles` and ensuring all 38 tests pass reliably.
+
+## 2025-11-23
+
+### Gem Fortune Artifact (TASK011)
+
+- Implemented "Gem Fortune" artifact.
+- **Logic:** When a Lucky Gem drops (from critical hits), the amount is now a random roll between 1 and `max(1, artifactLevel)`.
+- **Cost:** Base 500, Multiplier 2.0.
+- **Verification:** Tests passed (no regressions).
 
 ## 2025-11-21
 
