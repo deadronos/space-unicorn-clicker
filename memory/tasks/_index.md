@@ -11,6 +11,7 @@
 
 ## Completed
 
+- [TASK012] Fix Warp Drive Artifact — Completed 2025-11-23
 - [TASK010] Edge Case Tests — Completed 2025-11-23
 - [TASK009] Refactor App.tsx into smaller components — Completed 2025-11-21
 - [TASK008] Fix tests, lint and typecheck — Completed 2025-11-21
