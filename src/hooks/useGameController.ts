@@ -6,7 +6,7 @@ import { COMBO_DURATION_MS } from "../config";
 import { ACHIEVEMENT_DEFS } from "../achievements";
 import {
   applyDamageToShip,
-  calculatePrestigeGems,
+  performPrestige,
   checkAchievements,
   applyAchievementRewards,
   costOf,
@@ -428,15 +428,8 @@ export function useGameController() {
 
   const doPrestige = useCallback(() => {
     setGame(prev => {
-      const gems = calculatePrestigeGems(prev.totalEarned, prev.totalPrestiges);
-      if (gems <= 0) return prev;
-
-      const fresh = createFreshGameState();
-      fresh.prestigeGems = (prev.prestigeGems || 0) + gems;
-      fresh.totalPrestiges = (prev.totalPrestiges || 0) + 1;
-      fresh.stats = { ...prev.stats };
-      fresh.achievements = [...(prev.achievements || [])];
-      fresh.artifacts = { ...prev.artifacts };
+      const fresh = performPrestige(prev);
+      if (!fresh) return prev;
 
       saveState(fresh);
       return fresh;
