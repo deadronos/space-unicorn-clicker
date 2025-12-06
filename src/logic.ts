@@ -282,3 +282,25 @@ export function createFreshGameState(): GameSnapshot {
         }
     };
 }
+
+export function performPrestige(prev: GameSnapshot): GameSnapshot | null {
+    const gems = calculatePrestigeGems(prev.totalEarned, prev.totalPrestiges);
+    if (gems <= 0) return null;
+
+    const fresh = createFreshGameState();
+    fresh.prestigeGems = (prev.prestigeGems || 0) + gems;
+    fresh.totalPrestiges = (prev.totalPrestiges || 0) + 1;
+    fresh.stats = { ...prev.stats };
+    fresh.achievements = [...(prev.achievements || [])];
+    fresh.artifacts = { ...prev.artifacts };
+
+    // Apply Warp Drive
+    const warpLevel = fresh.artifacts["warp_drive"] || 0;
+    if (warpLevel > 0) {
+        fresh.zone = warpLevel * 5;
+        const startLevel = fresh.zone * 10;
+        fresh.ship = shipForLevel(startLevel);
+    }
+
+    return fresh;
+}
