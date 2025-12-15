@@ -69,9 +69,9 @@ export default function App() {
 
       <div className="relative z-10 flex flex-col h-full">
         <HeaderBar game={game} derived={derived} onImport={setGame} onOpenGallery={() => setShowGallery(true)} />
-        <div className="flex-1 flex flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-hidden">
+        <div className="flex-1 flex flex-wrap lg:flex-nowrap overflow-y-auto">
           <UpgradePanel game={game} onToggleAutoBuy={handleToggleAutoBuy} onPurchase={handleUpgradePurchase} />
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="flex-1 flex flex-col h-full relative">
             <GameView
               game={game}
               derived={derived}
