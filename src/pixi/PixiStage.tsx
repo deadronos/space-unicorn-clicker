@@ -69,7 +69,7 @@ const PixiStage = forwardRef<PixiStageHandle | null, Props>(function PixiStage(p
             canvas.style.width = `${w}px`;
             canvas.style.height = `${h}px`;
             app.renderer.resize(w, h);
-            // backgroundRef.current?.updateZone(zone, w, h);
+            backgroundRef.current?.resize(w, h);
           } catch (e) {
             // ignore
           }

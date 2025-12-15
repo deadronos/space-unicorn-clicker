@@ -6,9 +6,10 @@ interface HeaderBarProps {
   game: GameSnapshot;
   derived: GameSnapshot;
   onImport: (state: GameSnapshot) => void;
+  onOpenGallery: () => void;
 }
 
-export function HeaderBar({ game, derived, onImport }: HeaderBarProps) {
+export function HeaderBar({ game, derived, onImport, onOpenGallery }: HeaderBarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = useCallback(() => {
@@ -62,6 +63,12 @@ export function HeaderBar({ game, derived, onImport }: HeaderBarProps) {
 
       <div className="flex items-center gap-4">
         <div className="flex gap-2">
+          <button
+            onClick={onOpenGallery}
+            className="px-3 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-yellow-400 rounded border border-slate-700 transition-colors flex items-center gap-1"
+          >
+            <span>🏆</span> Legacy
+          </button>
           <button
             onClick={handleExport}
             className="px-3 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors"

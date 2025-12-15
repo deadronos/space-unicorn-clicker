@@ -10,7 +10,7 @@ export class Starfield {
     constructor(app: PIXI.Application) {
         this.app = app;
         this.container = new PIXI.Container();
-        this.container.zIndex = -1; // Ensure it's behind everything
+        // Removed zIndex to rely on insertion order (added first = bottom)
         this.app.stage.addChild(this.container);
         this.initStars();
     }
@@ -24,8 +24,9 @@ export class Starfield {
 
     private createStar() {
         const z = Math.random() * 3 + 1; // Depth factor (1 is close, 4 is far)
-        const size = Math.max(0.5, 3 / z);
-        const alpha = Math.min(1, 1.5 / z);
+        // Slightly increased size for better visibility
+        const size = Math.max(1.5, 4 / z);
+        const alpha = Math.min(1, 2 / z);
         const speed = 0.2 / z;
 
         const g = new PIXI.Graphics();
@@ -40,14 +41,31 @@ export class Starfield {
         this.stars.push({ sprite: g, z, speed });
     }
 
+    public resize(width: number, height: number) {
+        if (this.width === width && this.height === height) return;
+
+        // If we are resizing from a very small initial size to a larger one (initial load),
+        // redistribute stars so they don't clump in the top-left.
+        const isInitialExpand = (this.width < 200 && width > 200);
+
+        this.width = width;
+        this.height = height;
+
+        if (isInitialExpand) {
+            for (const star of this.stars) {
+                star.sprite.x = Math.random() * width;
+                star.sprite.y = Math.random() * height;
+            }
+        }
+    }
+
     public update(delta: number) {
         const { width, height } = this.app.screen;
 
-        // Re-init if resized significantly (optional, but good for responsiveness)
+        // Ensure internal dimensions match screen if resize wasn't called manually
         if (this.width !== width || this.height !== height) {
             this.width = width;
             this.height = height;
-            // Could reposition stars here if needed, but wrapping logic handles it
         }
 
         for (const star of this.stars) {

@@ -12,7 +12,7 @@ describe('HeaderBar - Combo Momentum Indicator', () => {
         (derived as any).comboDpsMult = 1.5; // +50%
         derived.comboCount = 5;
 
-        render(<HeaderBar game={game as any} derived={derived as any} onImport={() => {}} />);
+        render(<HeaderBar game={game as any} derived={derived as any} onImport={() => {}} onOpenGallery={() => {}} />);
 
         expect(screen.getByText(/Momentum/)).toBeTruthy();
         expect(screen.getByText(/50% DPS/)).toBeTruthy();
