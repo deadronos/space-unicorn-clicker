@@ -5,12 +5,16 @@ import { HeaderBar } from "./components/HeaderBar";
 import { UpgradePanel } from "./components/UpgradePanel";
 import { GameView } from "./components/GameView";
 import { PrestigePanel } from "./components/PrestigePanel";
+import { SkillBar } from "./components/SkillBar";
 import { AchievementToasts } from "./components/AchievementToasts";
+import { AchievementGallery } from "./components/AchievementGallery";
 import type { UpgradeDef } from "./types";
 import type { ArtifactDef } from "./prestige";
 import { artifactCost, costOf } from "./logic";
 
 export default function App() {
+  const [showGallery, setShowGallery] = React.useState(false);
+
   const {
     game,
     setGame,
@@ -22,6 +26,7 @@ export default function App() {
     pixiRef,
     handleAttack,
     doPrestige,
+    handleActivateSkill,
   } = useGameController();
 
   const handleToggleAutoBuy = useCallback((enabled: boolean) => {
@@ -60,18 +65,23 @@ export default function App() {
 
       <AchievementToasts notifications={achievementNotifs} />
 
+      {showGallery && <AchievementGallery game={game} onClose={() => setShowGallery(false)} />}
+
       <div className="relative z-10 flex flex-col h-full">
-        <HeaderBar game={game} derived={derived} onImport={setGame} />
+        <HeaderBar game={game} derived={derived} onImport={setGame} onOpenGallery={() => setShowGallery(true)} />
         <div className="flex-1 flex flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-hidden">
           <UpgradePanel game={game} onToggleAutoBuy={handleToggleAutoBuy} onPurchase={handleUpgradePurchase} />
-          <GameView
-            game={game}
-            derived={derived}
-            beams={beams}
-            clickZoneRef={clickZoneRef}
-            unicornRefs={unicornRefs}
-            onAttack={handleAttack}
-          />
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <GameView
+              game={game}
+              derived={derived}
+              beams={beams}
+              clickZoneRef={clickZoneRef}
+              unicornRefs={unicornRefs}
+              onAttack={handleAttack}
+            />
+            <SkillBar game={game} onActivate={handleActivateSkill} />
+          </div>
           <PrestigePanel game={game} derived={derived} onPrestige={doPrestige} onBuyArtifact={handleArtifactPurchase} />
         </div>
       </div>

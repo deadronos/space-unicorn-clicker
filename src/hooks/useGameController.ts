@@ -14,7 +14,9 @@ import {
   createFreshGameState,
   deriveStats,
   loadState,
-  saveState
+  saveState,
+  tickSkills,
+  activateSkill
 } from "../logic";
 import { UNICORN_CARD_LAYOUT, UPGRADE_DEFS, LUCK_GEM_CHANCE } from "../config";
 import { clamp } from "../utils";
@@ -61,7 +63,8 @@ export function hydrateSavedState(): GameSnapshot {
     unicornCount: saved.unicornCount ?? 1,
     stats: newStats,
     achievements: saved.achievements || [],
-    artifacts: saved.artifacts || {}
+    artifacts: saved.artifacts || {},
+    skills: saved.skills || {}
   };
 
   const unlocked = checkAchievements(newState);
@@ -96,6 +99,10 @@ export function useGameController() {
 
   const [game, setGame] = useState<GameSnapshot>(hydrateSavedState);
   const derived = useMemo(() => deriveStats(game), [game]);
+
+  const handleActivateSkill = useCallback((skillId: string) => {
+    setGame(prev => activateSkill(prev, skillId));
+  }, []);
 
   const spawnHornBeams = useCallback((crit: boolean, count: number) => {
     const safeCount = Math.min(Math.max(Math.floor(count), 0), UNICORN_CARD_LAYOUT.length);
@@ -334,21 +341,25 @@ export function useGameController() {
     const interval = setInterval(() => {
       setGame((prev) => {
         const now = Date.now();
-        const derivedStats = deriveStats(prev);
+        const dtMs = now - prev.lastTick;
 
-        let nextUpgrades = prev.upgrades;
-        let nextStardust = prev.stardust;
+        // Tick skills first
+        const base = tickSkills(prev, dtMs);
+        const derivedStats = deriveStats(base);
 
-        if (prev.autoBuy) {
+        let nextUpgrades = base.upgrades;
+        let nextStardust = base.stardust;
+
+        if (base.autoBuy) {
           const affordable = UPGRADE_DEFS.filter(def => {
-            const currentLevel = prev.upgrades[def.id]?.level ?? 0;
+            const currentLevel = base.upgrades[def.id]?.level ?? 0;
             const cost = costOf(def, currentLevel);
             return nextStardust >= cost;
           });
 
           if (affordable.length > 0) {
             const pick = affordable[Math.floor(Math.random() * affordable.length)];
-            const currentLevel = prev.upgrades[pick.id]?.level ?? 0;
+            const currentLevel = base.upgrades[pick.id]?.level ?? 0;
             const cost = costOf(pick, currentLevel);
 
             nextStardust -= cost;
@@ -359,18 +370,18 @@ export function useGameController() {
           }
         }
 
-        const dt = (now - prev.lastTick) / 1000;
-        if (dt < 0.05) return prev;
+        const dt = dtMs / 1000;
+        if (dt < 0.05) return base;
 
         // Passive Stardust Generation
         const passiveStardust = (derivedStats.passiveStardustPerSecond || 0) * dt;
         
         const damage = derivedStats.dps * dt;
         const { ship: newShip, rewardEarned, newZone } = applyDamageToShip(
-          prev.ship,
+          base.ship,
           damage,
           derivedStats.lootMultiplier,
-          prev.zone ?? 0,
+          base.zone ?? 0,
           undefined,
           derivedStats.bossDamageMult,
           false // isClick
@@ -378,20 +389,20 @@ export function useGameController() {
 
         const totalReward = rewardEarned + passiveStardust;
 
-        const newStats = { ...prev.stats };
-        if (!newStats.totalStardust) newStats.totalStardust = prev.totalEarned;
+        const newStats = { ...base.stats };
+        if (!newStats.totalStardust) newStats.totalStardust = base.totalEarned;
         newStats.totalStardust += totalReward;
         if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
         const nextState: GameSnapshot = {
-          ...prev,
+          ...base,
           upgrades: nextUpgrades,
           stardust: nextStardust + totalReward,
-          totalEarned: prev.totalEarned + totalReward,
+          totalEarned: base.totalEarned + totalReward,
           ship: newShip,
           zone: newZone,
           lastTick: now,
-          unicornCount: prev.unicornCount,
+          unicornCount: base.unicornCount,
           stats: newStats
         };
 
@@ -447,5 +458,6 @@ export function useGameController() {
     pixiRef,
     handleAttack,
     doPrestige,
+    handleActivateSkill
   };
 }
