@@ -3,6 +3,7 @@ import { UPGRADE_DEFS, STORAGE_KEY, COMBO_CRIT_CHANCE_PER_STACK, COMBO_CRIT_MULT
 import { clamp, fmt } from "./utils";
 import { ACHIEVEMENT_DEFS } from "./achievements";
 import { ARTIFACT_DEFS, ArtifactDef } from "./prestige";
+import { SKILL_DEFS } from "./skills";
 
 export function shipForLevel(level: number): Ship {
     const isBoss = level % 10 === 0;
@@ -21,8 +22,7 @@ export function shipForLevel(level: number): Ship {
 
     let generators: any[] = [];
     if (isBoss) {
-        // Spawn 4 generators at corners
-        const genHp = Math.ceil(hp * 0.25); // Total generator HP = 100% of boss HP (4 * 25%)
+        const genHp = Math.ceil(hp * 0.25);
         generators = [
             { id: 1, maxHp: genHp, hp: genHp, x: 10, y: 10 },
             { id: 2, maxHp: genHp, hp: genHp, x: 90, y: 10 },
@@ -80,6 +80,63 @@ export function computeComboDpsMultiplier(comboCount: number): number {
     return Math.min(mult, COMBO_MAX_DPS_MULT);
 }
 
+export function tickSkills(game: GameSnapshot, delta: number): GameSnapshot {
+    let changed = false;
+    const newSkills = { ...(game.skills || {}) };
+
+    // Ensure all skills exist in state
+    for (const def of SKILL_DEFS) {
+        if (!newSkills[def.id]) {
+            newSkills[def.id] = { id: def.id, cooldownRemaining: 0, activeRemaining: 0 };
+            changed = true;
+        }
+    }
+
+    for (const key in newSkills) {
+        const skill = { ...newSkills[key] };
+        let skillChanged = false;
+
+        if (skill.activeRemaining > 0) {
+            skill.activeRemaining = Math.max(0, skill.activeRemaining - delta);
+            skillChanged = true;
+        }
+
+        if (skill.cooldownRemaining > 0) {
+            skill.cooldownRemaining = Math.max(0, skill.cooldownRemaining - delta);
+            skillChanged = true;
+        }
+
+        if (skillChanged) {
+            newSkills[key] = skill;
+            changed = true;
+        }
+    }
+
+    if (!changed) return game;
+    return { ...game, skills: newSkills };
+}
+
+export function activateSkill(game: GameSnapshot, skillId: string): GameSnapshot {
+    const def = SKILL_DEFS.find(s => s.id === skillId);
+    if (!def) return game;
+
+    const skill = game.skills?.[skillId] || { id: skillId, cooldownRemaining: 0, activeRemaining: 0 };
+    if (skill.cooldownRemaining > 0) return game; // On cooldown
+    if (skill.activeRemaining > 0) return game; // Already active
+
+    return {
+        ...game,
+        skills: {
+            ...game.skills,
+            [skillId]: {
+                id: skillId,
+                cooldownRemaining: def.cooldown,
+                activeRemaining: def.duration
+            }
+        }
+    };
+}
+
 export function deriveStats(base: GameSnapshot): GameSnapshot {
     const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0, bossDamageMult: 1 };
 
@@ -114,27 +171,37 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
         g.critMult += critMultBonus;
         g.dps *= dpsMultiplier;
 
-        // Derived metadata
         (g as any).comboActive = true;
         (g as any).comboDpsMult = dpsMultiplier;
         (g as any).comboCritChanceBonus = critChanceBonus;
         (g as any).comboCritMultBonus = critMultBonus;
     }
 
+    // Skills
+    if (g.skills) {
+        if (g.skills['overcharge']?.activeRemaining > 0) {
+            g.clickDamage *= 2;
+        }
+        if (g.skills['super_turret']?.activeRemaining > 0) {
+            g.dps *= 3;
+        }
+        if (g.skills['lucky_star']?.activeRemaining > 0) {
+            g.critChance += 0.5;
+        }
+    }
+
     g.critChance = clamp(g.critChance, 0, 0.8);
 
-    // Gem multiplier (using Gem Polish artifact if present)
+    // Gem multiplier
     const polishLevel = artifacts["gem_polish"] || 0;
     const gemMult = getGemMultiplier(g.prestigeGems, polishLevel);
     g.lootMultiplier *= gemMult;
     g.dps *= gemMult;
     g.clickDamage *= gemMult;
 
-    // Void Siphon (Passive Stardust)
+    // Void Siphon
     const siphonLevel = artifacts["void_siphon"] || 0;
     if (siphonLevel > 0) {
-        // 0.1% per level per second of current ship reward
-        // Apply loot multiplier to this as well? Yes, usually passive income scales with loot bonuses.
         g.passiveStardustPerSecond = g.ship.reward * g.lootMultiplier * (siphonLevel * 0.001);
     } else {
         g.passiveStardustPerSecond = 0;
@@ -148,7 +215,7 @@ export function applyDamageToShip(
     damage: number,
     lootMultiplier: number,
     currentZone: number,
-    targetGeneratorId?: number, // Optional: specific generator to target
+    targetGeneratorId?: number,
     bossDamageMult: number = 1,
     isClick: boolean = false
 ): { ship: Ship; rewardEarned: number; newZone: number; damageDealt: number; hitShield: boolean } {
@@ -159,26 +226,21 @@ export function applyDamageToShip(
     let damageDealt = 0;
     let hitShield = false;
 
-    // Check for active generators
     const activeGenerators = currentShip.generators.filter(g => g.hp > 0);
     const hasShields = activeGenerators.length > 0;
 
     if (hasShields) {
         hitShield = true;
-        // If a specific generator is targeted and exists/active
         let targetGen = targetGeneratorId ? currentShip.generators.find(g => g.id === targetGeneratorId && g.hp > 0) : null;
 
-        // If no specific target (e.g. auto-dps), pick the first active one
         if (!targetGen && !targetGeneratorId) {
             targetGen = activeGenerators[0];
         }
 
         if (targetGen) {
-            // Apply boss damage multiplier if it's a boss
             let finalDamage = damage;
             if (ship.isBoss) {
                 finalDamage *= bossDamageMult;
-                // Massive damage bonus for clicking generators on bosses
                 if (isClick) {
                     finalDamage *= 5;
                 }
@@ -186,14 +248,12 @@ export function applyDamageToShip(
 
             const dealt = Math.min(targetGen.hp, finalDamage);
             targetGen.hp -= dealt;
-            remaining -= dealt; // Excess damage is lost (doesn't spill over to hull or other gens)
+            remaining -= dealt;
             damageDealt += dealt;
         } else {
-            // Targeted hull or dead generator while shields are up -> 0 damage
             damageDealt = 0;
         }
     } else {
-        // No shields, damage hull
         while (remaining > 0) {
             let finalDamage = remaining;
             if (ship.isBoss) {
@@ -213,7 +273,6 @@ export function applyDamageToShip(
                     newZone = newZone + 1;
                 }
                 currentShip = shipForLevel(newLevel);
-                // Break loop as we have a new ship
                 remaining = 0;
             }
         }
@@ -262,6 +321,7 @@ export function createFreshGameState(): GameSnapshot {
         bossDamageMult: 1,
         ship: shipForLevel(1),
         upgrades: createEmptyUpgrades(),
+        skills: {},
         autoBuy: true,
         lastTick: Date.now(),
         prestigeGems: 0,
@@ -294,7 +354,6 @@ export function performPrestige(prev: GameSnapshot): GameSnapshot | null {
     fresh.achievements = [...(prev.achievements || [])];
     fresh.artifacts = { ...prev.artifacts };
 
-    // Apply Warp Drive
     const warpLevel = fresh.artifacts["warp_drive"] || 0;
     if (warpLevel > 0) {
         fresh.zone = warpLevel * 5;

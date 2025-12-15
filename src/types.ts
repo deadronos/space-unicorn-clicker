@@ -30,6 +30,12 @@ export interface UpgradeDef {
 
 export interface UpgradeState { id: string; level: number; }
 
+export interface SkillState {
+    id: string;
+    cooldownRemaining: number;
+    activeRemaining: number;
+}
+
 export interface GameSnapshot {
     stardust: Currency;
     totalEarned: Currency;
@@ -42,6 +48,7 @@ export interface GameSnapshot {
     passiveStardustPerSecond?: number;
     ship: Ship;
     upgrades: Record<string, UpgradeState>;
+    skills: Record<string, SkillState>;
     autoBuy: boolean;
     lastTick: number;
     prestigeGems: number;
