@@ -4,6 +4,7 @@ import { artifactCost, calculatePrestigeGems, getGemMultiplier } from "../logic"
 import { fmt } from "../utils";
 import { ARTIFACT_DEFS } from "../prestige";
 import type { ArtifactDef } from "../prestige";
+import { ItemCard } from "./ItemCard";
 import { PRESTIGE_RANK_DAMAGE_BONUS, PRESTIGE_RANK_CRIT_MULT_BONUS, PRESTIGE_RANK_GEM_BONUS } from "../config";
 
 interface PrestigePanelProps {
@@ -74,24 +75,18 @@ export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: Pres
               const cost = artifactCost(def, level);
               const canAfford = game.prestigeGems >= cost;
               return (
-                <button
+                <ItemCard
                   key={def.id}
-                  disabled={!canAfford}
+                  id={def.id}
+                  name={def.name}
+                  level={level}
+                  description={def.description}
+                  cost={cost}
+                  canAfford={canAfford}
+                  currencyIcon="🔮"
                   onClick={() => onBuyArtifact(def)}
-                  className={`w-full p-2 rounded border text-left transition-all ${canAfford
-                    ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50"
-                    : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
-                    }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="font-bold text-slate-200 text-sm">{def.name}</span>
-                    <span className="text-xs font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">Lvl {level}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 my-1 leading-tight">{def.description}</div>
-                  <div className={`text-xs font-mono font-medium ${canAfford ? "text-purple-400" : "text-red-400"}`}>
-                    🔮 {fmt(cost)}
-                  </div>
-                </button>
+                  compact={true}
+                />
               );
             })}
           </div>
