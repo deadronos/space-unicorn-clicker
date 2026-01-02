@@ -2,7 +2,7 @@ import React from "react";
 import type { GameSnapshot, UpgradeDef } from "../types";
 import { UPGRADE_DEFS } from "../config";
 import { costOf } from "../logic";
-import { fmt } from "../utils";
+import { ItemCard } from "./ItemCard";
 
 interface UpgradePanelProps {
   game: GameSnapshot;
@@ -35,24 +35,17 @@ export function UpgradePanel({ game, onToggleAutoBuy, onPurchase }: UpgradePanel
           const cost = costOf(def, level);
           const canAfford = game.stardust >= cost;
           return (
-            <button
+            <ItemCard
               key={def.id}
-              disabled={!canAfford}
+              id={def.id}
+              name={def.name}
+              level={level}
+              description={def.desc}
+              cost={cost}
+              canAfford={canAfford}
+              currencyIcon="💎"
               onClick={() => onPurchase(def)}
-              className={`w-full p-3 rounded-lg text-left transition-all duration-200 border ${canAfford
-                ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] active:scale-[0.98]"
-                : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
-                }`}
-            >
-              <div className="flex justify-between items-start mb-1">
-                <span className="font-bold text-slate-200">{def.name}</span>
-                <span className="text-xs font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">Lvl {level}</span>
-              </div>
-              <div className="text-xs text-slate-400 mb-2">{def.desc}</div>
-              <div className={`text-sm font-mono font-medium ${canAfford ? "text-purple-400" : "text-red-400"}`}>
-                💎 {fmt(cost)}
-              </div>
-            </button>
+            />
           );
         })}
       </div>
