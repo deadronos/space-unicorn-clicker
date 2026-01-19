@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import PixiStage from "./pixi/PixiStage";
 import { useGameController } from "./hooks/useGameController";
 import { HeaderBar } from "./components/HeaderBar";
@@ -65,6 +65,16 @@ export default function App() {
     });
   }, [setGame]);
 
+  /* -------------------------------------------------------------------------- */
+  /*                               UI State                                     */
+  /* -------------------------------------------------------------------------- */
+  const [activeRightPanel, setActiveRightPanel] = useState<'prestige' | 'legacy' | 'none'>('prestige');
+
+  const handleToggleLegacy = useCallback(() => {
+    setActiveRightPanel(current => current === 'legacy' ? 'prestige' : 'legacy');
+  }, []);
+
+
   return (
     <ToastProvider>
     <TooltipProvider>
@@ -73,9 +83,14 @@ export default function App() {
 
       <AchievementToasts notifications={achievementNotifs} />
 
-      {showGallery && <AchievementGallery game={game} onClose={() => setShowGallery(false)} />}
 
-      <HeaderBar game={game} derived={derived} onImport={setGame} onOpenGallery={() => setShowGallery(true)} className="relative z-20" />
+      <HeaderBar 
+        game={game} 
+        derived={derived} 
+        onImport={setGame} 
+        onOpenGallery={handleToggleLegacy} 
+        className="relative z-20" 
+      />
 
       <div className="relative z-10 flex-1 flex overflow-hidden">
         {/* Left Panel: Upgrades */}
@@ -102,11 +117,15 @@ export default function App() {
           </div>
         </main>
 
-        {/* Right Panel: Prestige */}
+        {/* Right Panel: Prestige & Legacy */}
         <aside className="w-80 h-full border-l bg-background/80 backdrop-blur-sm hidden lg:flex flex-col">
-          <ScrollArea className="flex-1">
-            <PrestigePanel game={game} derived={derived} onPrestige={doPrestige} onBuyArtifact={handleArtifactPurchase} />
-          </ScrollArea>
+          {activeRightPanel === 'legacy' ? (
+             <AchievementGallery game={game} />
+          ) : (
+            <ScrollArea className="flex-1">
+               <PrestigePanel game={game} derived={derived} onPrestige={doPrestige} onBuyArtifact={handleArtifactPurchase} />
+            </ScrollArea>
+          )}
         </aside>
       </div>
 
@@ -126,6 +145,14 @@ export default function App() {
             <AccordionContent>
               <div className="max-h-[50vh] overflow-y-auto">
                 <PrestigePanel game={game} derived={derived} onPrestige={doPrestige} onBuyArtifact={handleArtifactPurchase} />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="legacy">
+            <AccordionTrigger className="px-4">Legacy</AccordionTrigger>
+            <AccordionContent>
+              <div className="max-h-[50vh] overflow-y-auto">
+                 <AchievementGallery game={game} />
               </div>
             </AccordionContent>
           </AccordionItem>
