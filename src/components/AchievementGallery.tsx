@@ -1,145 +1,155 @@
-import React, { useState } from "react";
+import React from "react";
+import { Trophy, BarChart3, Star, Zap, Flame, Target, Infinity, Rocket, Sparkles, CheckCircle2, RotateCcw } from "lucide-react";
 import { ACHIEVEMENT_DEFS } from "../achievements";
 import type { GameSnapshot } from "../types";
-import { fmt } from "../utils";
-import { RippleButton } from "./RippleButton";
+import { fmt, cn } from "../utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Progress } from "./ui/progress";
+import { ScrollArea } from "./ui/scroll-area";
+import { Separator } from "./ui/separator";
 
 interface AchievementGalleryProps {
     game: GameSnapshot;
-    onClose: () => void;
 }
 
-export function AchievementGallery({ game, onClose }: AchievementGalleryProps) {
-    const [activeTab, setActiveTab] = useState<'achievements' | 'stats'>('achievements');
-
+export function AchievementGallery({ game }: AchievementGalleryProps) {
     const unlockedIds = new Set(game.achievements);
     const unlockedCount = unlockedIds.size;
     const totalCount = ACHIEVEMENT_DEFS.length;
     const progress = Math.floor((unlockedCount / totalCount) * 100);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
-                {/* Header */}
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-                    <h2 className="text-xl font-bold bg-linear-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                        Legacy & Statistics
-                    </h2>
-                    <RippleButton onClick={onClose} className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
-                        ✕
-                    </RippleButton>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex border-b border-slate-700">
-                    <button
-                        onClick={() => setActiveTab('achievements')}
-                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'achievements'
-                                ? 'bg-slate-800 text-yellow-400 border-b-2 border-yellow-400'
-                                : 'bg-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'
-                            }`}
-                    >
-                        Achievements ({unlockedCount}/{totalCount})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('stats')}
-                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'stats'
-                                ? 'bg-slate-800 text-cyan-400 border-b-2 border-cyan-400'
-                                : 'bg-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'
-                            }`}
-                    >
-                        Statistics
-                    </button>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                    {activeTab === 'achievements' && (
-                        <div className="space-y-3">
-                            {/* Progress Bar */}
-                            <div className="mb-4">
-                                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                                    <span>Completion</span>
-                                    <span>{progress}%</span>
-                                </div>
-                                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-500"
-                                        style={{ width: `${progress}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-2">
-                                {ACHIEVEMENT_DEFS.map(ach => {
-                                    const isUnlocked = unlockedIds.has(ach.id);
-                                    return (
-                                        <div
-                                            key={ach.id}
-                                            className={`p-3 rounded-lg border flex items-center gap-4 transition-all ${isUnlocked
-                                                    ? 'bg-slate-800/80 border-yellow-500/30 shadow-lg shadow-yellow-900/10'
-                                                    : 'bg-slate-900/50 border-slate-800 opacity-60 grayscale'
-                                                }`}
-                                        >
-                                            <div className={`text-2xl ${isUnlocked ? '' : 'opacity-30'}`}>
-                                                {ach.id.includes('combo') ? '🔥' : '🏆'}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className={`font-bold ${isUnlocked ? 'text-yellow-100' : 'text-slate-500'}`}>
-                                                    {ach.name}
-                                                </div>
-                                                <div className="text-xs text-slate-400">
-                                                    {ach.description}
-                                                </div>
-                                            </div>
-                                            {isUnlocked && (
-                                                <div className="text-yellow-400/20">
-                                                    ✓
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'stats' && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <StatItem label="Total Stardust Earned" value={fmt(game.stats.totalStardust)} icon="✨" />
-                                <StatItem label="Total Clicks" value={game.stats.totalClicks.toLocaleString()} icon="🖱️" />
-                                <StatItem label="Highest Zone Reached" value={game.stats.highestZone.toString()} icon="🌌" />
-                                <StatItem label="Highest Combo" value={`${game.stats.highestCombo}x`} icon="🔥" />
-                                <StatItem label="Prestige Count" value={game.totalPrestiges.toLocaleString()} icon="🔄" />
-                                <StatItem label="Unicorns Recruited" value={game.stats.totalUnicorns.toLocaleString()} icon="🦄" />
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-800">
-                                <h3 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wider">Current Run</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <StatItem label="Current Stardust" value={fmt(game.stardust)} />
-                                    <StatItem label="Current Zone" value={game.zone.toString()} />
-                                    <StatItem label="Ship Level" value={game.ship.level.toString()} />
-                                    <StatItem label="Current Combo" value={`${game.comboCount}x`} />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+        <div className="h-full flex flex-col overflow-hidden bg-background">
+            <div className="p-4 border-b bg-muted/30 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md">
+                <h2 className="text-xl font-black tracking-tighter uppercase flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                        <Star className="w-5 h-5 text-primary animate-pulse" />
+                    </div>
+                    Galactic Legacy
+                </h2>
             </div>
+
+            <Tabs defaultValue="achievements" className="flex-1 flex flex-col overflow-hidden">
+                <div className="px-4 py-2">
+                    <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+                        <TabsTrigger value="achievements" className="font-black uppercase text-[10px] tracking-widest gap-2">
+                            <Trophy className="w-3 h-3" /> Hall of Fame
+                        </TabsTrigger>
+                        <TabsTrigger value="stats" className="font-black uppercase text-[10px] tracking-widest gap-2">
+                            <BarChart3 className="w-3 h-3" /> Archive Data
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+
+                <TabsContent value="achievements" className="flex-1 overflow-hidden flex flex-col px-4 mt-2">
+                    <div className="space-y-4 mb-4">
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Progression</div>
+                                <div className="text-sm font-bold">{unlockedCount} / {totalCount} Decoded</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-2xl font-black text-primary leading-none">{progress}%</div>
+                            </div>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                    </div>
+
+                    <ScrollArea className="flex-1 -mx-2 px-2 pb-6">
+                        <div className="grid gap-3">
+                            {ACHIEVEMENT_DEFS.map(ach => {
+                                const isUnlocked = unlockedIds.has(ach.id);
+                                const isCombo = ach.id.includes('combo');
+                                
+                                return (
+                                    <div
+                                        key={ach.id}
+                                        className={cn(
+                                            "p-3 rounded-xl border transition-all flex items-center gap-3 relative overflow-hidden group",
+                                            isUnlocked
+                                                ? 'bg-secondary/40 border-primary/30 shadow-sm'
+                                                : 'bg-muted/20 border-border/40 opacity-50 grayscale'
+                                        )}
+                                    >
+                                        {isUnlocked && <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />}
+                                        
+                                        <div className={cn(
+                                            "min-w-[40px] h-10 rounded-lg flex items-center justify-center text-lg shadow-inner",
+                                            isUnlocked ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                                        )}>
+                                            {isCombo ? <Flame className="w-5 h-5" /> : <Trophy className="w-5 h-5" />}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className={cn(
+                                                "font-black uppercase text-[10px] tracking-tight truncate",
+                                                isUnlocked ? "text-foreground" : "text-muted-foreground"
+                                            )}>
+                                                {ach.name}
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground leading-tight italic line-clamp-2">
+                                                "{ach.description}"
+                                            </div>
+                                        </div>
+
+                                        {isUnlocked && (
+                                            <div className="text-primary/40 shrink-0">
+                                                <CheckCircle2 className="w-4 h-4" />
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="stats" className="flex-1 overflow-hidden px-4 mt-2 pb-6 flex flex-col">
+                    <ScrollArea className="flex-1 -mx-2 px-2">
+                        <div className="space-y-6">
+                            <section>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-3 flex items-center gap-2">
+                                    <Infinity className="w-3 h-3" /> Lifetime Records
+                                </h3>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <StatItem label="Stardust" value={fmt(game.stats?.totalStardust ?? 0)} icon={<Star className="w-3 h-3" />} />
+                                    <StatItem label="Input Cycles" value={(game.stats?.totalClicks ?? 0).toLocaleString()} icon={<Target className="w-3 h-3" />} />
+                                    <StatItem label="Deep Space" value={`Zone ${game.stats?.highestZone ?? 0}`} icon={<Infinity className="w-3 h-3" />} />
+                                    <StatItem label="Peak Resonance" value={`${game.stats?.highestCombo ?? 0}x`} icon={<Flame className="w-3 h-3" />} />
+                                    <StatItem label="Resurrections" value={(game.totalPrestiges ?? 0).toLocaleString()} icon={<RotateCcw className="w-3 h-3" />} />
+                                    <StatItem label="Unicorn Armada" value={(game.stats?.totalUnicorns ?? 0).toLocaleString()} icon={<Rocket className="w-3 h-3" />} />
+                                </div>
+                            </section>
+
+                            <Separator />
+
+                            <section>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-3 flex items-center gap-2">
+                                    <Zap className="w-3 h-3" /> Current Session
+                                </h3>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <StatItem label="Local Stardust" value={fmt(game.stardust)} />
+                                    <StatItem label="Local Zone" value={game.zone.toString()} />
+                                    <StatItem label="Shell Integrity" value={game.ship.level.toString()} />
+                                    <StatItem label="Active Combo" value={`${game.comboCount}x`} />
+                                </div>
+                            </section>
+                        </div>
+                    </ScrollArea>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
 
-function StatItem({ label, value, icon }: { label: string; value: string; icon?: string }) {
+function StatItem({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
     return (
-        <div className="bg-slate-800/50 p-3 rounded border border-slate-700/50 flex items-center justify-between">
-            <span className="text-slate-400 text-sm flex items-center gap-2">
-                {icon && <span>{icon}</span>}
+        <div className="bg-secondary/20 p-3 rounded-xl border flex items-center justify-between group hover:bg-secondary/40 transition-colors">
+            <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+                {icon && <span className="text-primary/60">{icon}</span>}
                 {label}
             </span>
-            <span className="text-white font-mono font-bold">{value}</span>
+            <span className="text-foreground font-black font-mono text-xs">{value}</span>
         </div>
     );
 }

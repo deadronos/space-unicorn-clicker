@@ -46,6 +46,11 @@ export function hydrateSavedState(): GameSnapshot {
   // Ensure highestCombo exists on older saves (fallback to saved.comboCount)
   newStats.highestCombo = saved.stats?.highestCombo ?? saved.comboCount ?? 0;
   if (newStats.totalStardust === undefined) newStats.totalStardust = saved.totalEarned;
+  if (newStats.totalClicks === undefined) newStats.totalClicks = 0;
+  if (newStats.highestCombo === undefined) newStats.highestCombo = saved.comboCount ?? 0;
+  if (newStats.highestZone === undefined) newStats.highestZone = saved.zone ?? 0;
+  if (newStats.totalUnicorns === undefined) newStats.totalUnicorns = saved.unicornCount ?? 1;
+
   newStats.totalStardust += totalReward;
   if (newZone > newStats.highestZone) newStats.highestZone = newZone;
 
