@@ -115,12 +115,12 @@ export function AchievementGallery({ game, onClose }: AchievementGalleryProps) {
                                         <Infinity className="w-3 h-3" /> Lifetime Records
                                     </h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <StatItem label="Stardust" value={fmt(game.stats.totalStardust)} icon={<Star className="w-3 h-3" />} />
-                                        <StatItem label="Input Cycles" value={game.stats.totalClicks.toLocaleString()} icon={<Target className="w-3 h-3" />} />
-                                        <StatItem label="Deep Space" value={`Zone ${game.stats.highestZone}`} icon={<Infinity className="w-3 h-3" />} />
-                                        <StatItem label="Peak Resonance" value={`${game.stats.highestCombo}x`} icon={<Flame className="w-3 h-3" />} />
-                                        <StatItem label="Resurrections" value={game.totalPrestiges.toLocaleString()} icon={<RotateCcw className="w-3 h-3" />} />
-                                        <StatItem label="Unicorn Armada" value={game.stats.totalUnicorns.toLocaleString()} icon={<Rocket className="w-3 h-3" />} />
+                                        <StatItem label="Stardust" value={fmt(game.stats?.totalStardust ?? 0)} icon={<Star className="w-3 h-3" />} />
+                                        <StatItem label="Input Cycles" value={(game.stats?.totalClicks ?? 0).toLocaleString()} icon={<Target className="w-3 h-3" />} />
+                                        <StatItem label="Deep Space" value={`Zone ${game.stats?.highestZone ?? 0}`} icon={<Infinity className="w-3 h-3" />} />
+                                        <StatItem label="Peak Resonance" value={`${game.stats?.highestCombo ?? 0}x`} icon={<Flame className="w-3 h-3" />} />
+                                        <StatItem label="Resurrections" value={(game.totalPrestiges ?? 0).toLocaleString()} icon={<RotateCcw className="w-3 h-3" />} />
+                                        <StatItem label="Unicorn Armada" value={(game.stats?.totalUnicorns ?? 0).toLocaleString()} icon={<Rocket className="w-3 h-3" />} />
                                     </div>
                                 </section>
 
