@@ -15,6 +15,6 @@ describe('HeaderBar - Combo Momentum Indicator', () => {
         render(<HeaderBar game={game as any} derived={derived as any} onImport={() => {}} onOpenGallery={() => {}} />);
 
         expect(screen.getByText(/Momentum/)).toBeTruthy();
-        expect(screen.getByText(/50% DPS/)).toBeTruthy();
+        expect(screen.getByText(/Momentum: \+50%/)).toBeTruthy();
     });
 });

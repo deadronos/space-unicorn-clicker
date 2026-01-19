@@ -1,5 +1,7 @@
 import React from "react";
-import { fmt } from "../utils";
+import { fmt, cn } from "../utils";
+import { Card, CardContent } from "./ui/card";
+import { Progress } from "./ui/progress";
 
 interface ItemCardProps {
     id: string;
@@ -11,6 +13,7 @@ interface ItemCardProps {
     currencyIcon: React.ReactNode;
     onClick: () => void;
     compact?: boolean;
+    progress?: number;
 }
 
 export function ItemCard({
@@ -22,49 +25,61 @@ export function ItemCard({
     canAfford,
     currencyIcon,
     onClick,
-    compact = false
+    compact = false,
+    progress
 }: ItemCardProps) {
-    if (compact) {
-        return (
-            <button
-                key={id}
-                disabled={!canAfford}
-                onClick={onClick}
-                className={`w-full p-2 rounded border text-left transition-all ${canAfford
-                    ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50"
-                    : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
-                    }`}
-            >
-                <div className="flex justify-between items-start">
-                    <span className="font-bold text-slate-200 text-sm">{name}</span>
-                    <span className="text-xs font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">Lvl {level}</span>
-                </div>
-                <div className="text-[10px] text-slate-400 my-1 leading-tight">{description}</div>
-                <div className={`text-xs font-mono font-medium ${canAfford ? "text-purple-400" : "text-red-400"}`}>
-                    {currencyIcon} {fmt(cost)}
-                </div>
-            </button>
-        );
-    }
+    const affordabilityProgress = Math.min(1, progress ?? 0);
 
     return (
         <button
-            key={id}
-            disabled={!canAfford}
+            type="button"
+            className={cn(
+                "rounded-xl border bg-card text-card-foreground shadow w-full text-left",
+                "group cursor-pointer transition-all duration-200 overflow-hidden relative",
+                canAfford 
+                    ? "hover:border-primary/50 hover:bg-accent/50 active:scale-[0.98]" 
+                    : "opacity-60 grayscale-[0.5] cursor-not-allowed"
+            )}
             onClick={onClick}
-            className={`w-full p-3 rounded-lg text-left transition-all duration-200 border ${canAfford
-                ? "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-purple-500/50 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] active:scale-[0.98]"
-                : "bg-slate-900/50 border-slate-800 opacity-50 cursor-not-allowed"
-                }`}
+            disabled={!canAfford}
         >
-            <div className="flex justify-between items-start mb-1">
-                <span className="font-bold text-slate-200">{name}</span>
-                <span className="text-xs font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">Lvl {level}</span>
-            </div>
-            <div className="text-xs text-slate-400 mb-2">{description}</div>
-            <div className={`text-sm font-mono font-medium ${canAfford ? "text-purple-400" : "text-red-400"}`}>
-                {currencyIcon} {fmt(cost)}
-            </div>
+            <CardContent className={cn("p-3", compact ? "space-y-1" : "space-y-2")}>
+                <div className="flex justify-between items-start">
+                    <div className="space-y-0.5">
+                        <h3 className={cn("font-bold transition-colors group-hover:text-primary", compact ? "text-sm" : "text-base")}>
+                            {name}
+                        </h3>
+                        {description && !compact && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed italic">
+                                "{description}"
+                            </p>
+                        )}
+                    </div>
+                    <div className="bg-secondary text-secondary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                        Lvl {level}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                    <div className={cn(
+                        "font-mono font-bold flex items-center gap-1.5",
+                        canAfford ? "text-primary" : "text-destructive"
+                    )}>
+                        <span className="text-muted-foreground">{currencyIcon}</span>
+                        <span className={compact ? "text-xs" : "text-sm"}>{fmt(cost)}</span>
+                    </div>
+                    {progress !== undefined && !canAfford && (
+                        <div className="flex-1 max-w-[80px]">
+                            <Progress value={affordabilityProgress * 100} className="h-1" />
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+            
+            {/* Selection indicator or highlights could go here */}
+            {canAfford && (
+                <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            )}
         </button>
     );
 }
