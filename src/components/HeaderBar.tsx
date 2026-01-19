@@ -79,6 +79,8 @@ export function HeaderBar({ game, derived, onImport, onOpenGallery, className }:
             <span>Zone {derived.zone}</span>
             <Separator orientation="vertical" className="h-3" />
             <span>Level {derived.ship.level}</span>
+            <Separator orientation="vertical" className="h-3" />
+            <span>🦄 Unicorns: {game.unicornCount}</span>
           </div>
         </div>
       </div>

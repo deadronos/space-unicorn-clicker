@@ -31,14 +31,17 @@ export function ItemCard({
     const affordabilityProgress = Math.min(1, progress ?? 0);
 
     return (
-        <Card 
+        <button
+            type="button"
             className={cn(
+                "rounded-xl border bg-card text-card-foreground shadow w-full text-left",
                 "group cursor-pointer transition-all duration-200 overflow-hidden relative",
                 canAfford 
                     ? "hover:border-primary/50 hover:bg-accent/50 active:scale-[0.98]" 
-                    : "opacity-60 grayscale-[0.5]"
+                    : "opacity-60 grayscale-[0.5] cursor-not-allowed"
             )}
-            onClick={canAfford ? onClick : undefined}
+            onClick={onClick}
+            disabled={!canAfford}
         >
             <CardContent className={cn("p-3", compact ? "space-y-1" : "space-y-2")}>
                 <div className="flex justify-between items-start">
@@ -77,6 +80,6 @@ export function ItemCard({
             {canAfford && (
                 <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             )}
-        </Card>
+        </button>
     );
 }

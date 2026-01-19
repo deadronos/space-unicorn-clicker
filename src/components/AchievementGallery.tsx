@@ -119,7 +119,7 @@ export function AchievementGallery({ game, onClose }: AchievementGalleryProps) {
                                         <StatItem label="Input Cycles" value={game.stats.totalClicks.toLocaleString()} icon={<Target className="w-3 h-3" />} />
                                         <StatItem label="Deep Space" value={`Zone ${game.stats.highestZone}`} icon={<Infinity className="w-3 h-3" />} />
                                         <StatItem label="Peak Resonance" value={`${game.stats.highestCombo}x`} icon={<Flame className="w-3 h-3" />} />
-                                        <StatItem label="Resurrections" value={game.totalPrestiges.toLocaleString()} icon={<History className="w-3 h-3" />} />
+                                        <StatItem label="Resurrections" value={game.totalPrestiges.toLocaleString()} icon={<HistoryIcon className="w-3 h-3" />} />
                                         <StatItem label="Unicorn Armada" value={game.stats.totalUnicorns.toLocaleString()} icon={<Rocket className="w-3 h-3" />} />
                                     </div>
                                 </section>
