@@ -1,8 +1,10 @@
 import React from "react";
+import { Rocket, Zap, ChevronRight } from "lucide-react";
 import type { GameSnapshot, UpgradeDef } from "../types";
 import { UPGRADE_DEFS } from "../config";
 import { costOf } from "../logic";
 import { ItemCard } from "./ItemCard";
+import { Checkbox } from "./ui/checkbox";
 
 interface UpgradePanelProps {
   game: GameSnapshot;
@@ -12,28 +14,38 @@ interface UpgradePanelProps {
 
 export function UpgradePanel({ game, onToggleAutoBuy, onPurchase }: UpgradePanelProps) {
   return (
-    <div className="order-2 lg:order-1 w-full md:w-1/2 lg:w-80 bg-slate-900/90 backdrop-blur-sm border-r border-slate-800 flex flex-col shadow-xl h-96 lg:h-auto">
-      <div className="p-4 border-b border-slate-800 bg-slate-800/50">
-        <h2 className="font-bold text-slate-200 flex items-center gap-2">
-          <span>🚀</span> Upgrades
-        </h2>
-        <div className="flex items-center gap-2 mt-2">
-          <label className="text-xs flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={game.autoBuy}
-              onChange={e => onToggleAutoBuy(e.target.checked)}
-              className="rounded bg-slate-700 border-slate-600 text-purple-500 focus:ring-purple-500"
+    <div className="flex flex-col h-full bg-background/40">
+      <div className="p-4 border-b bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-black text-transparent bg-clip-text bg-gradient-to-br from-primary to-purple-400 flex items-center gap-2 tracking-tight uppercase">
+            <Rocket className="w-5 h-5 text-primary" />
+            Upgrades
+          </h2>
+          <div className="flex items-center gap-2 bg-secondary/50 px-2 py-1 rounded-md border border-primary/20">
+            <Checkbox 
+                id="auto-buy" 
+                checked={game.autoBuy} 
+                onCheckedChange={(checked) => onToggleAutoBuy(checked === true)}
+                className="border-primary/50 data-[state=checked]:bg-primary"
             />
-            Auto-Buy
-          </label>
+            <label htmlFor="auto-buy" className="text-[10px] font-black uppercase tracking-widest cursor-pointer select-none text-primary/80">
+              Auto
+            </label>
+          </div>
         </div>
+        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest flex items-center gap-1">
+            Enhance your interstellar capabilities
+            <ChevronRight className="w-3 h-3" />
+        </p>
       </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+
+      <div className="flex-1 p-3 space-y-3">
         {UPGRADE_DEFS.map((def) => {
           const level = game.upgrades[def.id]?.level || 0;
           const cost = costOf(def, level);
           const canAfford = game.stardust >= cost;
+          const progress = game.stardust / cost;
+
           return (
             <ItemCard
               key={def.id}
@@ -43,7 +55,8 @@ export function UpgradePanel({ game, onToggleAutoBuy, onPurchase }: UpgradePanel
               description={def.desc}
               cost={cost}
               canAfford={canAfford}
-              currencyIcon="💎"
+              progress={progress}
+              currencyIcon={<Zap className="w-3 h-3 fill-current" />}
               onClick={() => onPurchase(def)}
             />
           );

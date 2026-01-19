@@ -11,6 +11,12 @@ import { AchievementGallery } from "./components/AchievementGallery";
 import type { UpgradeDef } from "./types";
 import type { ArtifactDef } from "./prestige";
 import { artifactCost, costOf } from "./logic";
+import { ScrollArea } from "./components/ui/scroll-area";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./components/ui/accordion";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { ToastProvider, ToastViewport } from "./components/ui/toast";
+
+
 
 export default function App() {
   const [showGallery, setShowGallery] = React.useState(false);
@@ -60,18 +66,28 @@ export default function App() {
   }, [setGame]);
 
   return (
-    <div className="relative w-full h-screen bg-slate-950 text-slate-100 overflow-hidden select-none font-sans">
+    <ToastProvider>
+    <TooltipProvider>
+    <div className="relative w-full h-screen bg-background text-foreground overflow-hidden select-none font-sans flex flex-col">
       <PixiStage ref={pixiRef} className="absolute inset-0 z-0" zone={derived.zone} companionCount={derived.companionCount} />
 
       <AchievementToasts notifications={achievementNotifs} />
 
       {showGallery && <AchievementGallery game={game} onClose={() => setShowGallery(false)} />}
 
-      <div className="relative z-10 flex flex-col h-full">
-        <HeaderBar game={game} derived={derived} onImport={setGame} onOpenGallery={() => setShowGallery(true)} />
-        <div className="flex-1 flex flex-wrap lg:flex-nowrap overflow-y-auto">
-          <UpgradePanel game={game} onToggleAutoBuy={handleToggleAutoBuy} onPurchase={handleUpgradePurchase} />
-          <div className="flex-1 flex flex-col h-full relative">
+      <HeaderBar game={game} derived={derived} onImport={setGame} onOpenGallery={() => setShowGallery(true)} className="relative z-20" />
+
+      <div className="relative z-10 flex-1 flex overflow-hidden">
+        {/* Left Panel: Upgrades */}
+        <aside className="w-80 h-full border-r bg-background/80 backdrop-blur-sm hidden lg:flex flex-col">
+          <ScrollArea className="flex-1">
+            <UpgradePanel game={game} onToggleAutoBuy={handleToggleAutoBuy} onPurchase={handleUpgradePurchase} />
+          </ScrollArea>
+        </aside>
+
+        {/* Center: Game View */}
+        <main className="flex-1 flex flex-col relative overflow-hidden">
+          <div className="flex-1 relative">
             <GameView
               game={game}
               derived={derived}
@@ -80,11 +96,44 @@ export default function App() {
               unicornRefs={unicornRefs}
               onAttack={handleAttack}
             />
+          </div>
+          <div className="p-4 bg-background/50 backdrop-blur-sm border-t">
             <SkillBar game={game} onActivate={handleActivateSkill} />
           </div>
-          <PrestigePanel game={game} derived={derived} onPrestige={doPrestige} onBuyArtifact={handleArtifactPurchase} />
-        </div>
+        </main>
+
+        {/* Right Panel: Prestige */}
+        <aside className="w-80 h-full border-l bg-background/80 backdrop-blur-sm hidden lg:flex flex-col">
+          <ScrollArea className="flex-1">
+            <PrestigePanel game={game} derived={derived} onPrestige={doPrestige} onBuyArtifact={handleArtifactPurchase} />
+          </ScrollArea>
+        </aside>
+      </div>
+
+      {/* Mobile/Collapsed Accordion for Small Screens */}
+      <div className="lg:hidden relative z-10 bg-background/90 backdrop-blur-sm border-t">
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="upgrades">
+            <AccordionTrigger className="px-4">Upgrades</AccordionTrigger>
+            <AccordionContent>
+              <div className="max-h-[50vh] overflow-y-auto">
+                <UpgradePanel game={game} onToggleAutoBuy={handleToggleAutoBuy} onPurchase={handleUpgradePurchase} />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="prestige">
+            <AccordionTrigger className="px-4">Prestige</AccordionTrigger>
+            <AccordionContent>
+              <div className="max-h-[50vh] overflow-y-auto">
+                <PrestigePanel game={game} derived={derived} onPrestige={doPrestige} onBuyArtifact={handleArtifactPurchase} />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
+    </TooltipProvider>
+    <ToastViewport />
+    </ToastProvider>
   );
 }
