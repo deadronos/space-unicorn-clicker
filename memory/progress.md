@@ -1,5 +1,20 @@
 # Progress Log
 
+## 2026-03-19
+
+### Dependency Upgrades (TASK015)
+
+- **Package Updates:** Upgraded all dependencies to their latest versions, including `vite`, `vitest`, `pixi.js`, `tailwindcss`, `react`, and `lucide-react`.
+- **Peer Dependency Resolution:** Resolved conflicts between `vite` 8 and `@vitejs/plugin-react` 6 using `--legacy-peer-deps`.
+- **Test Environment Fixes:**
+  - Installed `@testing-library/dom` to resolve missing `fireEvent` and `screen` exports in `@testing-library/react`.
+  - Installed `@pixi/core`, `@pixi/constants`, `@pixi/math`, `@pixi/settings`, and `@pixi/utils` to resolve missing package errors in `@pixi/filter-glow`.
+- **Verification:**
+  - `npm run typecheck` passed.
+  - `npm test` passed (all 59 tests).
+  - `npm run build` succeeded.
+  - Visually verified the application UI using a Playwright screenshot.
+
 ## 2025-11-24
 
 ### Prestige & Artifact Enhancements (TASK002 Follow-up)
