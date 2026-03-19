@@ -1,9 +1,13 @@
 # Active Context
 
-Current focus: Ensuring system stability and robustness through comprehensive edge-case testing.
+Current focus: Upgrading dependencies and ensuring stability (TASK015).
 
 Recent changes
 
+- **Dependency Upgrades (TASK015):**
+  - Upgraded all dependencies to their latest versions, including `vite`, `vitest`, `pixi.js`, `tailwindcss`, `react`, and `lucide-react`.
+  - Resolved peer dependency conflicts between `vite` 8 and `@vitejs/plugin-react` 6 using `--legacy-peer-deps`.
+  - Fixed test environment issues by installing `@testing-library/dom` and various `@pixi/*` subpackages required by `@pixi/filter-glow`.
 - **Prestige & Artifacts:**
   - Removed audio system.
   - Added Lucky Prestige Gems (RNG drops).
