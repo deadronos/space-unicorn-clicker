@@ -28,5 +28,36 @@ try {
   // ignore environments without HTMLCanvasElement
 }
 
+// Some environments (e.g., jsdom 29 with certain configs) may provide a partial
+// `localStorage` implementation lacking `.clear()`. Tests in this repo rely on
+// `localStorage.clear()` to reset state between runs, so ensure it's available.
+if (typeof (globalThis as any).localStorage !== 'undefined') {
+  const storage = (globalThis as any).localStorage;
+  if (typeof storage.clear !== 'function') {
+    const backing = new Map<string, string>();
+    (globalThis as any).localStorage = {
+      getItem: (key: string) => {
+        const value = backing.get(key);
+        return value === undefined ? null : value;
+      },
+      setItem: (key: string, value: string) => {
+        backing.set(key, String(value));
+      },
+      removeItem: (key: string) => {
+        backing.delete(key);
+      },
+      clear: () => {
+        backing.clear();
+      },
+      key: (index: number) => {
+        return Array.from(backing.keys())[index] ?? null;
+      },
+      get length() {
+        return backing.size;
+      },
+    } as any;
+  }
+}
+
 // Enable React's act() environment
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;

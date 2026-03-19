@@ -19,3 +19,22 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+## Optional: Verify UI via Playwright (Python)
+
+A simple verification script is included in `verification/verify_app.py` that uses Playwright to open the app and take a screenshot.
+
+```bash
+# Start the dev server in a separate terminal
+npm run dev
+
+# In another terminal (requires Python + Playwright):
+python verification/verify_app.py
+```
+
+You may need to install Playwright first:
+
+```bash
+pip install playwright
+playwright install chromium
+```
