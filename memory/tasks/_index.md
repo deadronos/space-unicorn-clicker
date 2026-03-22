@@ -8,11 +8,11 @@
 - [TASK001] Create tests for deriveStats and costOf — In Progress 2025-10-22
 - [TASK011] Gem Fortune Artifact — In Progress 2025-11-23
 
-
 ## Pending
- 
 
 ## Completed
+
+- [TASK016] Fix Chrono Resonance and Unicorn Stats — Completed 2026-03-22
 
 - [TASK012] Fix Warp Drive Artifact — Completed 2025-11-23
 - [TASK010] Edge Case Tests — Completed 2025-11-23

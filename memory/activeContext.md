@@ -1,6 +1,6 @@
 # Active Context
 
-Current focus: Upgrading dependencies and ensuring stability (TASK015).
+Current focus: Maintaining stability while reviewing and fixing regressions (TASK016 completed).
 
 Recent changes
 
@@ -8,6 +8,11 @@ Recent changes
   - Upgraded all dependencies to their latest versions, including `vite`, `vitest`, `pixi.js`, `tailwindcss`, `react`, and `lucide-react`.
   - Resolved peer dependency conflicts between `vite` 8 and `@vitejs/plugin-react` 6 using `--legacy-peer-deps`.
   - Fixed test environment issues by installing `@testing-library/dom` and various `@pixi/*` subpackages required by `@pixi/filter-glow`.
+- **Review Follow-up (TASK016):**
+  - Fixed Chrono Resonance so it actually reduces active skill cooldowns.
+  - Updated the unicorn lifetime stat so it tracks the highest squad size reached.
+  - Removed stray `.orig` / `.rej` patch artifact files.
+  - Added regression tests and verified `npm test` and `npm run typecheck`.
 - **Prestige & Artifacts:**
   - Removed audio system.
   - Added Lucky Prestige Gems (RNG drops).
@@ -26,6 +31,7 @@ Recent changes
 
 Completed Tasks
 
+- TASK016: Fix Chrono Resonance and Unicorn Stats - Completed 2026-03-22
 - TASK010: Edge Case Tests - Completed 2025-11-23
 - TASK009: Refactor App.tsx - Completed 2025-11-21
 - TASK005: Unicorn Spawning Upgrade - Completed 2025-10-26

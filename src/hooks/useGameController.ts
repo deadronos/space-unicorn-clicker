@@ -294,6 +294,7 @@ export function useGameController() {
       newStats.totalClicks = (newStats.totalClicks || 0) + 1;
       // Track highest combo reached
       newStats.highestCombo = Math.max(newStats.highestCombo || 0, newCombo);
+      newStats.totalUnicorns = Math.max(newStats.totalUnicorns || 0, newUnicornCount);
 
       // Play a subtle combo chime and spawn a small combo visual when combo increments
       if (newCombo > prev.comboCount) {

@@ -51,6 +51,16 @@ export function getGemMultiplier(gems: number, polishLevel: number = 0): number 
     return 1 + (gems * bonusPerGem);
 }
 
+export function getSkillCooldownMultiplier(game: Pick<GameSnapshot, "artifacts" | "skillCooldownMult">): number {
+    const storedMultiplier = game.skillCooldownMult;
+    if (typeof storedMultiplier === "number" && storedMultiplier > 0) {
+        return storedMultiplier;
+    }
+
+    const resonanceLevel = game.artifacts?.["chrono_resonance"] || 0;
+    return 1 / (1 + resonanceLevel * 0.1);
+}
+
 export function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
 export function artifactCost(def: ArtifactDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
@@ -124,7 +134,7 @@ export function activateSkill(game: GameSnapshot, skillId: string): GameSnapshot
     if (skill.cooldownRemaining > 0) return game; // On cooldown
     if (skill.activeRemaining > 0) return game; // Already active
 
-    const cooldown = def.cooldown * (game.skillCooldownMult ?? 1);
+    const cooldown = Math.max(1, Math.round(def.cooldown * getSkillCooldownMultiplier(game)));
 
     return {
         ...game,
@@ -210,8 +220,7 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
     }
 
     // Chrono Resonance
-    const resonanceLevel = artifacts["chrono_resonance"] || 0;
-    g.skillCooldownMult = 1 / (1 + resonanceLevel * 0.1);
+    g.skillCooldownMult = getSkillCooldownMultiplier(base);
 
     return g;
 }
