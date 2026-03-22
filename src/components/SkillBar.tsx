@@ -4,6 +4,7 @@ import { SKILL_DEFS } from '../skills';
 import { RippleButton } from './RippleButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { cn } from '../utils';
+import { getSkillCooldownMultiplier } from '../logic';
 
 interface SkillBarProps {
     game: GameSnapshot;
@@ -12,6 +13,7 @@ interface SkillBarProps {
 
 export function SkillBar({ game, onActivate }: SkillBarProps) {
     if (!game.skills) return null;
+    const cooldownMultiplier = getSkillCooldownMultiplier(game);
 
     return (
         <div className="flex justify-center gap-6 p-2">
@@ -19,8 +21,9 @@ export function SkillBar({ game, onActivate }: SkillBarProps) {
                 const state = game.skills[def.id] || { cooldownRemaining: 0, activeRemaining: 0 };
                 const isOnCooldown = state.cooldownRemaining > 0;
                 const isActive = state.activeRemaining > 0;
+                const effectiveCooldown = def.cooldown * cooldownMultiplier;
                 const progress = isOnCooldown
-                    ? (state.cooldownRemaining / def.cooldown) * 100
+                    ? (state.cooldownRemaining / effectiveCooldown) * 100
                     : 0;
 
                 return (
@@ -62,7 +65,7 @@ export function SkillBar({ game, onActivate }: SkillBarProps) {
                                 "{def.description}"
                             </div>
                             <div className="text-[9px] font-bold mt-1 bg-secondary px-2 py-0.5 rounded-full border border-primary/20 uppercase">
-                                Cooldown: {def.cooldown / 1000}s
+                                Cooldown: {Math.ceil(effectiveCooldown / 1000)}s
                             </div>
                         </TooltipContent>
                     </Tooltip>

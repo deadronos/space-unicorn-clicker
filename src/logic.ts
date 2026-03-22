@@ -51,6 +51,16 @@ export function getGemMultiplier(gems: number, polishLevel: number = 0): number 
     return 1 + (gems * bonusPerGem);
 }
 
+export function getSkillCooldownMultiplier(game: Pick<GameSnapshot, "artifacts" | "skillCooldownMult">): number {
+    const storedMultiplier = game.skillCooldownMult;
+    if (typeof storedMultiplier === "number" && storedMultiplier > 0) {
+        return storedMultiplier;
+    }
+
+    const resonanceLevel = game.artifacts?.["chrono_resonance"] || 0;
+    return 1 / (1 + resonanceLevel * 0.1);
+}
+
 export function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
 export function artifactCost(def: ArtifactDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
@@ -124,13 +134,15 @@ export function activateSkill(game: GameSnapshot, skillId: string): GameSnapshot
     if (skill.cooldownRemaining > 0) return game; // On cooldown
     if (skill.activeRemaining > 0) return game; // Already active
 
+    const cooldown = Math.max(1, Math.round(def.cooldown * getSkillCooldownMultiplier(game)));
+
     return {
         ...game,
         skills: {
             ...game.skills,
             [skillId]: {
                 id: skillId,
-                cooldownRemaining: def.cooldown,
+                cooldownRemaining: cooldown,
                 activeRemaining: def.duration
             }
         }
@@ -207,6 +219,9 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
         g.passiveStardustPerSecond = 0;
     }
 
+    // Chrono Resonance
+    g.skillCooldownMult = getSkillCooldownMultiplier(base);
+
     return g;
 }
 
@@ -238,31 +253,28 @@ export function applyDamageToShip(
         }
 
         if (targetGen) {
-            let finalDamage = damage;
+            let mult = 1;
             if (ship.isBoss) {
-                finalDamage *= bossDamageMult;
-                if (isClick) {
-                    finalDamage *= 5;
-                }
+                mult *= bossDamageMult;
+                if (isClick) mult *= 5;
             }
 
+            const finalDamage = damage * mult;
             const dealt = Math.min(targetGen.hp, finalDamage);
             targetGen.hp -= dealt;
-            remaining -= dealt;
+            remaining = Math.max(0, remaining - (mult > 0 ? dealt / mult : 0));
             damageDealt += dealt;
         } else {
             damageDealt = 0;
         }
     } else {
-        while (remaining > 0) {
-            let finalDamage = remaining;
-            if (ship.isBoss) {
-                finalDamage *= bossDamageMult;
-            }
+        while (remaining > 0.001) {
+            const mult = currentShip.isBoss ? bossDamageMult : 1;
+            const finalDamage = remaining * mult;
 
             const dealt = Math.min(currentShip.hp, finalDamage);
             currentShip.hp -= dealt;
-            remaining -= dealt;
+            remaining = Math.max(0, remaining - (mult > 0 ? dealt / mult : 0));
             damageDealt += dealt;
 
             if (currentShip.hp <= 0) {
@@ -273,7 +285,10 @@ export function applyDamageToShip(
                     newZone = newZone + 1;
                 }
                 currentShip = shipForLevel(newLevel);
-                remaining = 0;
+                // If the next ship is a boss, stop spillover to ensure boss mechanics are respected
+                if (currentShip.isBoss) {
+                    remaining = 0;
+                }
             }
         }
     }

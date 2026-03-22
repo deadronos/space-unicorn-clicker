@@ -2,6 +2,13 @@
 
 ## 2026-03-19
 
+### Review Follow-up (TASK016)
+
+- **Chrono Resonance:** Added a shared cooldown multiplier helper and wired it through skill activation and the SkillBar display so the artifact now actually shortens active skill cooldowns.
+- **Unicorn Lifetime Stat:** Updated `totalUnicorns` to track the highest unicorn squad size reached when a new unicorn spawns.
+- **Cleanup:** Removed stray `src/logic.ts.orig` and `src/logic.ts.rej` patch artifacts.
+- **Verification:** Added regression tests for both fixes and verified `npm test` (61 tests) plus `npm run typecheck` pass.
+
 ### Dependency Upgrades (TASK015)
 
 - **Package Updates:** Upgraded all dependencies to their latest versions, including `vite`, `vitest`, `pixi.js`, `tailwindcss`, `react`, and `lucide-react`.

@@ -45,6 +45,7 @@ export interface GameSnapshot {
     critChance: number;
     critMult: number;
     bossDamageMult: number;
+    skillCooldownMult?: number;
     passiveStardustPerSecond?: number;
     ship: Ship;
     upgrades: Record<string, UpgradeState>;
