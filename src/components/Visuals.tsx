@@ -102,15 +102,41 @@ export function ShieldGeneratorVisual({ x, y, hp, maxHp }: { x: number; y: numbe
 
     if (isDestroyed) return null;
 
+    const radius = 14;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (healthPct / 100) * circumference;
+
     return (
         <div
             className="absolute w-8 h-8 -ml-4 -mt-4 z-20 cursor-pointer hover:scale-110 transition-transform"
             style={{ left: `${x}%`, top: `${y}%` }}
             title={`Shield Generator: ${Math.ceil(hp)}/${maxHp}`}
         >
-            <div className="w-full h-full rounded-full bg-cyan-900 border-2 border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse relative overflow-hidden">
-                <div className="absolute bottom-0 left-0 right-0 bg-cyan-400 transition-all duration-300" style={{ height: `${healthPct}%`, opacity: 0.5 }} />
-                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-cyan-100 pointer-events-none">
+            <div className="w-full h-full rounded-full bg-cyan-950/80 border border-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.4)] relative flex items-center justify-center overflow-hidden">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 32 32">
+                    <circle
+                        cx="16"
+                        cy="16"
+                        r={radius}
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="transparent"
+                        className="text-cyan-900/50"
+                    />
+                    <circle
+                        cx="16"
+                        cy="16"
+                        r={radius}
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="transparent"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        className="text-cyan-400 transition-all duration-500 ease-out"
+                    />
+                </svg>
+                <div className="relative z-10 text-[10px] font-bold text-cyan-100 drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]">
                     ⚡
                 </div>
             </div>

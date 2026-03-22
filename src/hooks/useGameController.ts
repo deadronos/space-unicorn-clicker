@@ -363,7 +363,13 @@ export function useGameController() {
           });
 
           if (affordable.length > 0) {
-            const pick = affordable[Math.floor(Math.random() * affordable.length)];
+            // Sort by cost and pick the cheapest one
+            const sorted = [...affordable].sort((a, b) => {
+              const costA = costOf(a, base.upgrades[a.id]?.level ?? 0);
+              const costB = costOf(b, base.upgrades[b.id]?.level ?? 0);
+              return costA - costB;
+            });
+            const pick = sorted[0];
             const currentLevel = base.upgrades[pick.id]?.level ?? 0;
             const cost = costOf(pick, currentLevel);
 

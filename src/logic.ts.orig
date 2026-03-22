@@ -124,15 +124,13 @@ export function activateSkill(game: GameSnapshot, skillId: string): GameSnapshot
     if (skill.cooldownRemaining > 0) return game; // On cooldown
     if (skill.activeRemaining > 0) return game; // Already active
 
-    const cooldown = def.cooldown * (game.skillCooldownMult ?? 1);
-
     return {
         ...game,
         skills: {
             ...game.skills,
             [skillId]: {
                 id: skillId,
-                cooldownRemaining: cooldown,
+                cooldownRemaining: def.cooldown,
                 activeRemaining: def.duration
             }
         }
@@ -209,10 +207,6 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
         g.passiveStardustPerSecond = 0;
     }
 
-    // Chrono Resonance
-    const resonanceLevel = artifacts["chrono_resonance"] || 0;
-    g.skillCooldownMult = 1 / (1 + resonanceLevel * 0.1);
-
     return g;
 }
 
@@ -244,28 +238,31 @@ export function applyDamageToShip(
         }
 
         if (targetGen) {
-            let mult = 1;
+            let finalDamage = damage;
             if (ship.isBoss) {
-                mult *= bossDamageMult;
-                if (isClick) mult *= 5;
+                finalDamage *= bossDamageMult;
+                if (isClick) {
+                    finalDamage *= 5;
+                }
             }
 
-            const finalDamage = damage * mult;
             const dealt = Math.min(targetGen.hp, finalDamage);
             targetGen.hp -= dealt;
-            remaining = Math.max(0, remaining - (mult > 0 ? dealt / mult : 0));
+            remaining -= dealt;
             damageDealt += dealt;
         } else {
             damageDealt = 0;
         }
     } else {
-        while (remaining > 0.001) {
-            const mult = currentShip.isBoss ? bossDamageMult : 1;
-            const finalDamage = remaining * mult;
+        while (remaining > 0) {
+            let finalDamage = remaining;
+            if (ship.isBoss) {
+                finalDamage *= bossDamageMult;
+            }
 
             const dealt = Math.min(currentShip.hp, finalDamage);
             currentShip.hp -= dealt;
-            remaining = Math.max(0, remaining - (mult > 0 ? dealt / mult : 0));
+            remaining -= dealt;
             damageDealt += dealt;
 
             if (currentShip.hp <= 0) {
@@ -276,10 +273,7 @@ export function applyDamageToShip(
                     newZone = newZone + 1;
                 }
                 currentShip = shipForLevel(newLevel);
-                // If the next ship is a boss, stop spillover to ensure boss mechanics are respected
-                if (currentShip.isBoss) {
-                    remaining = 0;
-                }
+                remaining = 0;
             }
         }
     }

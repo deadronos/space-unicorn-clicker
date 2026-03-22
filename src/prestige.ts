@@ -72,5 +72,15 @@ export const ARTIFACT_DEFS: ArtifactDef[] = [
         apply: (g, level) => {
             // Handled in handleAttack
         }
+    },
+    {
+        id: "chrono_resonance",
+        name: "Chrono Resonance",
+        description: "Reduces active skill cooldowns by 10% per level.",
+        baseCost: 150,
+        costMult: 1.8,
+        apply: (g, level) => {
+            // Handled in deriveStats and activateSkill
+        }
     }
 ];

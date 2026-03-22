@@ -1,0 +1,24 @@
+--- logic.ts
++++ logic.ts
+@@ -237,14 +237,13 @@
+         }
+
+         if (targetGen) {
+-            let finalDamage = damage;
++            let mult = 1;
+             if (ship.isBoss) {
+-                finalDamage *= bossDamageMult;
+-                if (isClick) {
+-                    finalDamage *= 5;
+-                }
+-            }
+-
++                mult *= bossDamageMult;
++                if (isClick) mult *= 5;
++            }
++
++            const finalDamage = damage * mult;
+             const dealt = Math.min(targetGen.hp, finalDamage);
+             targetGen.hp -= dealt;
+-            remaining -= dealt;
++            remaining = Math.max(0, remaining - (mult > 0 ? dealt / mult : 0));
