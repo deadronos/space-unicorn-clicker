@@ -57,6 +57,7 @@ export function UpgradePanel({ game, onToggleAutoBuy, onPurchase }: UpgradePanel
               canAfford={canAfford}
               progress={progress}
               currencyIcon={<Zap className="w-3 h-3 fill-current" />}
+              maxLevel={def.maxLevel}
               onClick={() => onPurchase(def)}
             />
           );

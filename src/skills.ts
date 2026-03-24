@@ -31,5 +31,13 @@ export const SKILL_DEFS: SkillDef[] = [
         cooldown: 90000,
         duration: 5000,
         icon: "🌟"
+    },
+    {
+        id: "void_beam",
+        name: "Void Beam",
+        description: "Deals 15% of current target HP",
+        cooldown: 30000,
+        duration: 0,
+        icon: "🌑"
     }
 ];

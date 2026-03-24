@@ -18,9 +18,7 @@ export const ARTIFACT_DEFS: ArtifactDef[] = [
         baseCost: 10,
         costMult: 1.5,
         apply: (g, level) => {
-            // Handled in getGemMultiplier logic directly usually, or we set a modifier in state
-            // For now, let's say we store a 'gemBonus' multiplier in state?
-            // Or we just read this artifact level in logic.ts
+            // Handled in getGemMultiplier logic directly
         }
     },
     {
@@ -81,6 +79,16 @@ export const ARTIFACT_DEFS: ArtifactDef[] = [
         costMult: 1.8,
         apply: (g, level) => {
             // Handled in deriveStats and activateSkill
+        }
+    },
+    {
+        id: "cosmic_lens",
+        name: "Cosmic Lens",
+        description: "Increases Crit Multiplier by 0.01x per combo stack per level.",
+        baseCost: 200,
+        costMult: 1.8,
+        apply: (g, level) => {
+            // Handled in deriveStats
         }
     }
 ];

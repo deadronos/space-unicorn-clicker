@@ -24,7 +24,7 @@ export interface UpgradeDef {
     name: string;
     desc: string;
     baseCost: number;
-    costMult: number;
+    costMult: number; maxLevel?: number;
     apply: (state: GameSnapshot) => void;
 }
 

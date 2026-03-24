@@ -1,5 +1,6 @@
 import React from "react";
 import { BEAM_COLORS } from "../config";
+import { cn } from "../utils";
 
 export function BeamVisual({
     crit,
@@ -97,6 +98,19 @@ export function ImpactSparks({ duration }: { duration: number }) {
 }
 
 export function ShieldGeneratorVisual({ x, y, hp, maxHp }: { x: number; y: number; hp: number; maxHp: number }) {
+    const [hit, setHit] = React.useState(false);
+    const prevHpRef = React.useRef(hp);
+
+    React.useEffect(() => {
+        if (hp < prevHpRef.current) {
+            setHit(true);
+            const t = setTimeout(() => setHit(false), 150);
+            prevHpRef.current = hp;
+            return () => clearTimeout(t);
+        }
+        prevHpRef.current = hp;
+    }, [hp]);
+
     const healthPct = (hp / maxHp) * 100;
     const isDestroyed = hp <= 0;
 
@@ -108,11 +122,18 @@ export function ShieldGeneratorVisual({ x, y, hp, maxHp }: { x: number; y: numbe
 
     return (
         <div
-            className="absolute w-8 h-8 -ml-4 -mt-4 z-20 cursor-pointer hover:scale-110 transition-transform"
+            className={cn(
+                "absolute w-8 h-8 -ml-4 -mt-4 z-20 cursor-pointer hover:scale-110 transition-all duration-75",
+                hit ? "scale-125" : "scale-100"
+            )}
             style={{ left: `${x}%`, top: `${y}%` }}
             title={`Shield Generator: ${Math.ceil(hp)}/${maxHp}`}
         >
-            <div className="w-full h-full rounded-full bg-cyan-950/80 border border-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.4)] relative flex items-center justify-center overflow-hidden">
+            <div className={cn(
+                "w-full h-full rounded-full bg-cyan-950/80 border transition-colors",
+                hit ? "border-white bg-cyan-400/50 shadow-[0_0_20px_white]" : "border-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.4)]",
+                "relative flex items-center justify-center overflow-hidden"
+            )}>
                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 32 32">
                     <circle
                         cx="16"

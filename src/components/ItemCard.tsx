@@ -14,6 +14,7 @@ interface ItemCardProps {
     onClick: () => void;
     compact?: boolean;
     progress?: number;
+    maxLevel?: number;
 }
 
 export function ItemCard({
@@ -26,9 +27,12 @@ export function ItemCard({
     currencyIcon,
     onClick,
     compact = false,
-    progress
+    progress,
+    maxLevel
 }: ItemCardProps) {
     const affordabilityProgress = Math.min(1, progress ?? 0);
+    const isMax = maxLevel !== undefined && level >= maxLevel;
+    const isDisabled = !canAfford || isMax;
 
     return (
         <button
@@ -36,12 +40,12 @@ export function ItemCard({
             className={cn(
                 "rounded-xl border bg-card text-card-foreground shadow w-full text-left",
                 "group cursor-pointer transition-all duration-200 overflow-hidden relative",
-                canAfford 
+                !isDisabled
                     ? "hover:border-primary/50 hover:bg-accent/50 active:scale-[0.98]" 
                     : "opacity-60 grayscale-[0.5] cursor-not-allowed"
             )}
             onClick={onClick}
-            disabled={!canAfford}
+            disabled={isDisabled}
         >
             <CardContent className={cn("p-3", compact ? "space-y-1" : "space-y-2")}>
                 <div className="flex justify-between items-start">
@@ -63,12 +67,12 @@ export function ItemCard({
                 <div className="flex items-center justify-between gap-4">
                     <div className={cn(
                         "font-mono font-bold flex items-center gap-1.5",
-                        canAfford ? "text-primary" : "text-destructive"
+                        isMax ? "text-muted-foreground" : canAfford ? "text-primary" : "text-destructive"
                     )}>
-                        <span className="text-muted-foreground">{currencyIcon}</span>
-                        <span className={compact ? "text-xs" : "text-sm"}>{fmt(cost)}</span>
+                        {!isMax && <span className="text-muted-foreground">{currencyIcon}</span>}
+                        <span className={compact ? "text-xs" : "text-sm"}>{isMax ? "MAX" : fmt(cost)}</span>
                     </div>
-                    {progress !== undefined && !canAfford && (
+                    {progress !== undefined && !canAfford && !isMax && (
                         <div className="flex-1 max-w-[80px]">
                             <Progress value={affordabilityProgress * 100} className="h-1" />
                         </div>
