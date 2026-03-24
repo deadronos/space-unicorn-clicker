@@ -1,0 +1,103 @@
+<<<<<<< SEARCH
+export function deriveStats(base: GameSnapshot): GameSnapshot {
+    const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0, bossDamageMult: 1 };
+
+    // Apply upgrades
+    for (const def of UPGRADE_DEFS) def.apply(g);
+
+    // Apply artifacts
+    const artifacts = base.artifacts || {};
+    for (const def of ARTIFACT_DEFS) {
+        const level = artifacts[def.id] || 0;
+        if (level > 0) def.apply(g, level);
+    }
+
+    // Prestige Rank Bonuses (Permanent)
+    const prestiges = base.totalPrestiges || 0;
+    if (prestiges > 0) {
+        const dmgBonus = 1 + (prestiges * PRESTIGE_RANK_DAMAGE_BONUS);
+        g.dps *= dmgBonus;
+        g.clickDamage *= dmgBonus;
+        g.critMult += prestiges * PRESTIGE_RANK_CRIT_MULT_BONUS;
+    }
+
+    // Combo bonuses
+    const now = Date.now();
+    if (isComboActive(base, now)) {
+        const comboCount = base.comboCount ?? 0;
+        const critChanceBonus = computeComboCritChanceBonus(comboCount);
+        const critMultBonus = computeComboCritMultBonus(comboCount);
+        const dpsMultiplier = computeComboDpsMultiplier(comboCount);
+
+        g.critChance += critChanceBonus;
+        g.critMult += critMultBonus;
+
+        // Cosmic Lens: Increases Crit Multiplier by 0.01x per combo stack per level
+        const lensLevel = base.artifacts?.["cosmic_lens"] || 0;
+        if (lensLevel > 0) {
+            g.critMult += comboCount * 0.01 * lensLevel;
+        }
+
+        g.dps *= dpsMultiplier;
+
+        (g as any).comboActive = true;
+        (g as any).comboDpsMult = dpsMultiplier;
+        (g as any).comboCritChanceBonus = critChanceBonus;
+        (g as any).comboCritMultBonus = critMultBonus;
+    }
+
+    // Skills
+    if (g.skills) {
+=======
+export function deriveStats(base: GameSnapshot): GameSnapshot {
+    const g: GameSnapshot = { ...base, clickDamage: 1, dps: 0, lootMultiplier: 1, critChance: 0.02, critMult: 3, companionCount: base.companionCount ?? 0, bossDamageMult: 1 };
+
+    // 1. Static Modifiers (Upgrades & Artifacts)
+    // Upgrades
+    for (const def of UPGRADE_DEFS) def.apply(g);
+
+    // Artifacts
+    const artifacts = base.artifacts || {};
+    for (const def of ARTIFACT_DEFS) {
+        const level = artifacts[def.id] || 0;
+        if (level > 0) def.apply(g, level);
+    }
+
+    // Prestige Rank Bonuses (Permanent)
+    const prestiges = base.totalPrestiges || 0;
+    if (prestiges > 0) {
+        const dmgBonus = 1 + (prestiges * PRESTIGE_RANK_DAMAGE_BONUS);
+        g.dps *= dmgBonus;
+        g.clickDamage *= dmgBonus;
+        g.critMult += prestiges * PRESTIGE_RANK_CRIT_MULT_BONUS;
+    }
+
+    // 2. Dynamic Modifiers (Combo & Skills)
+    // Combo bonuses
+    const now = Date.now();
+    if (isComboActive(base, now)) {
+        const comboCount = base.comboCount ?? 0;
+        const critChanceBonus = computeComboCritChanceBonus(comboCount);
+        const critMultBonus = computeComboCritMultBonus(comboCount);
+        const dpsMultiplier = computeComboDpsMultiplier(comboCount);
+
+        g.critChance += critChanceBonus;
+        g.critMult += critMultBonus;
+
+        // Cosmic Lens: Increases Crit Multiplier by 0.01x per combo stack per level
+        const lensLevel = artifacts["cosmic_lens"] || 0;
+        if (lensLevel > 0) {
+            g.critMult += comboCount * 0.01 * lensLevel;
+        }
+
+        g.dps *= dpsMultiplier;
+
+        (g as any).comboActive = true;
+        (g as any).comboDpsMult = dpsMultiplier;
+        (g as any).comboCritChanceBonus = critChanceBonus;
+        (g as any).comboCritMultBonus = critMultBonus;
+    }
+
+    // Skills
+    if (g.skills) {
+>>>>>>> REPLACE

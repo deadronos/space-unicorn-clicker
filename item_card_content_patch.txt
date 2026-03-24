@@ -1,0 +1,21 @@
+<<<<<<< SEARCH
+                <div className="flex items-center justify-between gap-4">
+                    <div className={cn(
+                        "font-mono font-bold flex items-center gap-1.5",
+                        canAfford ? "text-primary" : "text-destructive"
+                    )}>
+                        <span className="text-muted-foreground">{currencyIcon}</span>
+                        <span className={compact ? "text-xs" : "text-sm"}>{fmt(cost)}</span>
+                    </div>
+                    {progress !== undefined && !canAfford && (
+=======
+                <div className="flex items-center justify-between gap-4">
+                    <div className={cn(
+                        "font-mono font-bold flex items-center gap-1.5",
+                        isMax ? "text-muted-foreground" : canAfford ? "text-primary" : "text-destructive"
+                    )}>
+                        {!isMax && <span className="text-muted-foreground">{currencyIcon}</span>}
+                        <span className={compact ? "text-xs" : "text-sm"}>{isMax ? "MAX" : fmt(cost)}</span>
+                    </div>
+                    {progress !== undefined && !canAfford && !isMax && (
+>>>>>>> REPLACE

@@ -1,0 +1,87 @@
+<<<<<<< SEARCH
+interface ItemCardProps {
+    id: string;
+    name: string;
+    level: number;
+    description: string;
+    cost: number;
+    canAfford: boolean;
+    currencyIcon: React.ReactNode;
+    onClick: () => void;
+    compact?: boolean;
+    progress?: number;
+}
+
+export function ItemCard({
+    id,
+    name,
+    level,
+    description,
+    cost,
+    canAfford,
+    currencyIcon,
+    onClick,
+    compact = false,
+    progress
+}: ItemCardProps) {
+    const affordabilityProgress = Math.min(1, progress ?? 0);
+
+    return (
+        <button
+            type="button"
+            className={cn(
+                "rounded-xl border bg-card text-card-foreground shadow w-full text-left",
+                "group cursor-pointer transition-all duration-200 overflow-hidden relative",
+                canAfford
+                    ? "hover:border-primary/50 hover:bg-accent/50 active:scale-[0.98]"
+                    : "opacity-60 grayscale-[0.5] cursor-not-allowed"
+            )}
+            onClick={onClick}
+            disabled={!canAfford}
+        >
+=======
+interface ItemCardProps {
+    id: string;
+    name: string;
+    level: number;
+    description: string;
+    cost: number;
+    canAfford: boolean;
+    currencyIcon: React.ReactNode;
+    onClick: () => void;
+    compact?: boolean;
+    progress?: number;
+    maxLevel?: number;
+}
+
+export function ItemCard({
+    id,
+    name,
+    level,
+    description,
+    cost,
+    canAfford,
+    currencyIcon,
+    onClick,
+    compact = false,
+    progress,
+    maxLevel
+}: ItemCardProps) {
+    const affordabilityProgress = Math.min(1, progress ?? 0);
+    const isMax = maxLevel !== undefined && level >= maxLevel;
+    const isDisabled = !canAfford || isMax;
+
+    return (
+        <button
+            type="button"
+            className={cn(
+                "rounded-xl border bg-card text-card-foreground shadow w-full text-left",
+                "group cursor-pointer transition-all duration-200 overflow-hidden relative",
+                !isDisabled
+                    ? "hover:border-primary/50 hover:bg-accent/50 active:scale-[0.98]"
+                    : "opacity-60 grayscale-[0.5] cursor-not-allowed"
+            )}
+            onClick={onClick}
+            disabled={isDisabled}
+        >
+>>>>>>> REPLACE

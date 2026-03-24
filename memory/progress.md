@@ -1,5 +1,14 @@
 # Progress Log
 
+## 2026-03-24
+
+### PR40 Review Follow-up
+
+- **Cosmic Lens:** Wired the artifact into combo-based crit multiplier calculation so the new tests now pass.
+- **Upgrade Caps:** Added shared `maxLevel` enforcement in manual purchase and auto-buy logic so capped upgrades stop at their limit.
+- **Supernova Core:** Corrected the stat math to match the on-screen description.
+- **Testing:** Added regression coverage for Cosmic Lens, upgrade caps, and Supernova Core; verified `npm test` (67 tests) and `npm run typecheck` pass.
+
 ## 2026-03-19
 
 ### Review Follow-up (TASK016)

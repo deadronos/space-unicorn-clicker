@@ -63,6 +63,14 @@ export function getSkillCooldownMultiplier(game: Pick<GameSnapshot, "artifacts" 
 
 export function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
+export function isUpgradeAtMaxLevel(def: UpgradeDef, level: number): boolean {
+    return typeof def.maxLevel === 'number' && level >= def.maxLevel;
+}
+
+export function canPurchaseUpgrade(def: UpgradeDef, level: number): boolean {
+    return !isUpgradeAtMaxLevel(def, level);
+}
+
 export function artifactCost(def: ArtifactDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
 export function createEmptyUpgrades(): Record<string, UpgradeState> {
@@ -173,8 +181,8 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
 
     // Combo bonuses
     const now = Date.now();
+    const comboCount = base.comboCount ?? 0;
     if (isComboActive(base, now)) {
-        const comboCount = base.comboCount ?? 0;
         const critChanceBonus = computeComboCritChanceBonus(comboCount);
         const critMultBonus = computeComboCritMultBonus(comboCount);
         const dpsMultiplier = computeComboDpsMultiplier(comboCount);
@@ -187,6 +195,11 @@ export function deriveStats(base: GameSnapshot): GameSnapshot {
         (g as any).comboDpsMult = dpsMultiplier;
         (g as any).comboCritChanceBonus = critChanceBonus;
         (g as any).comboCritMultBonus = critMultBonus;
+
+        const cosmicLensLevel = artifacts['cosmic_lens'] || 0;
+        if (cosmicLensLevel > 0) {
+            g.critMult += comboCount * 0.01 * cosmicLensLevel;
+        }
     }
 
     // Skills

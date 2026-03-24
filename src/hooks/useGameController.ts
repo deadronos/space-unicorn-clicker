@@ -16,7 +16,8 @@ import {
   loadState,
   saveState,
   tickSkills,
-  activateSkill
+  activateSkill,
+  isUpgradeAtMaxLevel
 } from "../logic";
 import { UNICORN_CARD_LAYOUT, UPGRADE_DEFS, LUCK_GEM_CHANCE } from "../config";
 import { clamp } from "../utils";
@@ -106,7 +107,55 @@ export function useGameController() {
   const derived = useMemo(() => deriveStats(game), [game]);
 
   const handleActivateSkill = useCallback((skillId: string) => {
-    setGame(prev => activateSkill(prev, skillId));
+    setGame(prev => {
+      const next = activateSkill(prev, skillId);
+      if (next === prev) return prev; // Not activated (on cooldown)
+
+      if (skillId === 'void_beam') {
+        const derived = deriveStats(prev);
+        const damage = prev.ship.hp * 0.15;
+        const { ship: newShip, rewardEarned, newZone, damageDealt } = applyDamageToShip(
+          prev.ship,
+          damage,
+          derived.lootMultiplier,
+          prev.zone ?? 0,
+          undefined,
+          derived.bossDamageMult,
+          false // is not a normal click
+        );
+
+        if (pixiRef.current && clickZoneRef.current) {
+          const rect = clickZoneRef.current.getBoundingClientRect();
+          const cx = rect.left + rect.width * 0.5;
+          const cy = rect.top + rect.height * 0.5;
+
+          pixiRef.current.spawnBeam({
+            x0: rect.left, y0: rect.top, x1: cx, y1: cy,
+            color: '#1e1b4b', width: 20, duration: 800
+          });
+
+          if (damagePoolRef.current) {
+            damagePoolRef.current.spawn(Math.floor(damageDealt) as any, 1000, {
+              app: (pixiRef.current as any).app,
+              pixiOpts: {
+                x: cx, y: cy,
+                style: { fill: 0x1e1b4b, fontSize: 40, fontWeight: 'bold', stroke: 0xffffff, strokeThickness: 4 }
+              }
+            });
+          }
+        }
+
+        return {
+          ...next,
+          stardust: next.stardust + rewardEarned,
+          totalEarned: next.totalEarned + rewardEarned,
+          ship: newShip,
+          zone: newZone
+        };
+      }
+
+      return next;
+    });
   }, []);
 
   const spawnHornBeams = useCallback((crit: boolean, count: number) => {
@@ -359,6 +408,7 @@ export function useGameController() {
         if (base.autoBuy) {
           const affordable = UPGRADE_DEFS.filter(def => {
             const currentLevel = base.upgrades[def.id]?.level ?? 0;
+            if (isUpgradeAtMaxLevel(def, currentLevel)) return false;
             const cost = costOf(def, currentLevel);
             return nextStardust >= cost;
           });
@@ -373,6 +423,7 @@ export function useGameController() {
             const pick = sorted[0];
             const currentLevel = base.upgrades[pick.id]?.level ?? 0;
             const cost = costOf(pick, currentLevel);
+            if (isUpgradeAtMaxLevel(pick, currentLevel)) return base;
 
             nextStardust -= cost;
             nextUpgrades = {

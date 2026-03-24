@@ -34,7 +34,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
         apply: (g) => { const lvl = g.upgrades.core?.level ?? 0; g.dps += 1 * lvl; g.clickDamage += 1 * lvl; }
     },
     {
-        id: "crit", name: "💫 Quasar Focus", desc: "+1% crit chance per level (3x)", baseCost: 150, costMult: 1.22,
+        id: "crit", name: "💫 Quasar Focus", desc: "+1% crit chance per level (3x)", baseCost: 150, maxLevel: 80, costMult: 1.22,
         apply: (g) => { const lvl = g.upgrades.crit?.level ?? 0; g.critChance += 0.01 * lvl; }
     },
     {
@@ -50,12 +50,12 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
         apply: (g) => { const lvl = g.upgrades.chain?.level ?? 0; g.critChance += 0.002 * lvl; g.critMult += 0.1 * lvl; }
     },
     {
-        id: "momentum", name: "🚀 Momentum", desc: "+5% click and DPS per level", baseCost: 1500, costMult: 1.35,
+        id: "momentum", name: "🚀 Momentum", desc: "+5% click and DPS per level", baseCost: 150, maxLevel: 800, costMult: 1.35,
         apply: (g) => { const lvl = g.upgrades.momentum?.level ?? 0; g.clickDamage *= 1 + 0.05 * lvl; g.dps *= 1 + 0.05 * lvl; }
     },
     {
         id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
-        apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 4 * lvl; g.clickDamage += 2 * lvl; }
+        apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; }
     },
     {
         id: "drones", name: "🤖 Companion Drones", desc: "+1 companion drone that auto-fires", baseCost: 5000, costMult: 1.45,
