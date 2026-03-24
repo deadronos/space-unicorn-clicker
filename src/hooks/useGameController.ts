@@ -16,7 +16,8 @@ import {
   loadState,
   saveState,
   tickSkills,
-  activateSkill
+  activateSkill,
+  isUpgradeAtMaxLevel
 } from "../logic";
 import { UNICORN_CARD_LAYOUT, UPGRADE_DEFS, LUCK_GEM_CHANCE } from "../config";
 import { clamp } from "../utils";
@@ -407,6 +408,7 @@ export function useGameController() {
         if (base.autoBuy) {
           const affordable = UPGRADE_DEFS.filter(def => {
             const currentLevel = base.upgrades[def.id]?.level ?? 0;
+            if (isUpgradeAtMaxLevel(def, currentLevel)) return false;
             const cost = costOf(def, currentLevel);
             return nextStardust >= cost;
           });
@@ -421,6 +423,7 @@ export function useGameController() {
             const pick = sorted[0];
             const currentLevel = base.upgrades[pick.id]?.level ?? 0;
             const cost = costOf(pick, currentLevel);
+            if (isUpgradeAtMaxLevel(pick, currentLevel)) return base;
 
             nextStardust -= cost;
             nextUpgrades = {

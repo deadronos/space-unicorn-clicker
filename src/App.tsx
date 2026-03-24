@@ -10,7 +10,7 @@ import { AchievementToasts } from "./components/AchievementToasts";
 import { AchievementGallery } from "./components/AchievementGallery";
 import type { UpgradeDef } from "./types";
 import type { ArtifactDef } from "./prestige";
-import { artifactCost, costOf } from "./logic";
+import { artifactCost, costOf, isUpgradeAtMaxLevel } from "./logic";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./components/ui/accordion";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -42,6 +42,7 @@ export default function App() {
   const handleUpgradePurchase = useCallback((def: UpgradeDef) => {
     setGame((prev) => {
       const level = prev.upgrades[def.id]?.level ?? 0;
+      if (isUpgradeAtMaxLevel(def, level)) return prev;
       const price = costOf(def, level);
       if (prev.stardust < price) return prev;
       const nextUps = { ...prev.upgrades, [def.id]: { id: def.id, level: level + 1 } };

@@ -55,7 +55,7 @@ export const UPGRADE_DEFS: UpgradeDef[] = [
     },
     {
         id: "supernova", name: "🌟 Supernova Core", desc: "+2 DPS and +1 click per level", baseCost: 3000, costMult: 1.4,
-        apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 4 * lvl; g.clickDamage += 2 * lvl; }
+        apply: (g) => { const lvl = g.upgrades.supernova?.level ?? 0; g.dps += 2 * lvl; g.clickDamage += 1 * lvl; }
     },
     {
         id: "drones", name: "🤖 Companion Drones", desc: "+1 companion drone that auto-fires", baseCost: 5000, costMult: 1.45,

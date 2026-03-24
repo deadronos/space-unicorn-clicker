@@ -4,6 +4,13 @@ Current focus: Maintaining stability while reviewing and fixing regressions (TAS
 
 Recent changes
 
+- **PR40 Review Follow-up (2026-03-24):**
+  - Wired Cosmic Lens into combo crit multiplier calculation.
+  - Enforced `maxLevel` caps in both manual and auto-buy upgrade paths.
+  - Aligned Supernova Core stats with its description.
+  - Added regression tests for Cosmic Lens, upgrade caps, and Supernova Core.
+  - Verified `npm test` and `npm run typecheck` pass.
+
 - **Dependency Upgrades (TASK015):**
   - Upgraded all dependencies to their latest versions, including `vite`, `vitest`, `pixi.js`, `tailwindcss`, `react`, and `lucide-react`.
   - Resolved peer dependency conflicts between `vite` 8 and `@vitejs/plugin-react` 6 using `--legacy-peer-deps`.
@@ -47,6 +54,7 @@ Next steps
 
 Notes
 
+- Upgrade caps are enforced in shared gameplay logic, not just the UI.
 - Passive Stardust: Visible now with 1 decimal place for small numbers.
 - Unicorn Squadron upgrade: baseCost 5000, costMult 1.45
 - Crit-based spawn chance is 5% per critical hit
