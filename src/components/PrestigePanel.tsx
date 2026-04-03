@@ -10,7 +10,7 @@ import {
   Gem
 } from "lucide-react";
 import type { GameSnapshot } from "../types";
-import { artifactCost, calculatePrestigeGems, getGemMultiplier } from "../logic";
+import { costOf, calculatePrestigeGems, getGemMultiplier } from "../logic";
 import { fmt, cn } from "../utils";
 import { ARTIFACT_DEFS } from "../prestige";
 import type { ArtifactDef } from "../prestige";
@@ -76,7 +76,7 @@ export function PrestigePanel({ game, derived, onPrestige, onBuyArtifact }: Pres
           <TabsContent value="artifacts" className="flex-1 overflow-y-auto pr-1 -mr-1 custom-scrollbar space-y-3">
              {ARTIFACT_DEFS.map(def => {
                 const level = game.artifacts?.[def.id] || 0;
-                const cost = artifactCost(def, level);
+                const cost = costOf(def, level);
                 const canAfford = game.prestigeGems >= cost;
                 const progress = game.prestigeGems / cost;
 
