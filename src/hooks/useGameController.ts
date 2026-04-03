@@ -106,6 +106,33 @@ export function useGameController() {
   const [game, setGame] = useState<GameSnapshot>(hydrateSavedState);
   const derived = useMemo(() => deriveStats(game), [game]);
 
+
+  const processAchievements = useCallback((state: GameSnapshot, shouldExplode: boolean) => {
+    const unlocked = checkAchievements(state);
+    if (unlocked.length > 0) {
+      applyAchievementRewards(state, unlocked);
+      state.achievements = [...(state.achievements || []), ...unlocked];
+      const newNotifs = unlocked.map(id => {
+        const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
+        return { id, name: def?.name || "Unknown" };
+      });
+      setAchievementNotifs(curr => [...curr, ...newNotifs]);
+      setTimeout(() => {
+        setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
+      }, 4000);
+      if (shouldExplode) {
+        try {
+          if (pixiRef.current && clickZoneRef.current) {
+            const clickRect = clickZoneRef.current.getBoundingClientRect();
+            const cx = clickRect.left + clickRect.width * 0.5;
+            const cy = clickRect.top + clickRect.height * 0.5;
+            pixiRef.current.spawnExplosion(cx, cy);
+          }
+        } catch (e) { }
+      }
+    }
+  }, []);
+
   const handleActivateSkill = useCallback((skillId: string) => {
     setGame(prev => {
       const next = activateSkill(prev, skillId);
@@ -368,25 +395,7 @@ export function useGameController() {
         prestigeGems: (prev.prestigeGems || 0) + gemsFound
       };
 
-      const unlocked = checkAchievements(nextState);
-      if (unlocked.length > 0) {
-        applyAchievementRewards(nextState, unlocked);
-        nextState.achievements = [...(nextState.achievements || []), ...unlocked];
-        const newNotifs = unlocked.map(id => {
-          const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
-          return { id, name: def?.name || "Unknown" };
-        });
-        setAchievementNotifs(curr => [...curr, ...newNotifs]);
-        setTimeout(() => {
-          setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
-        }, 4000);
-        try { if (pixiRef.current && clickZoneRef.current) {
-          const clickRect = clickZoneRef.current.getBoundingClientRect();
-          const cx = clickRect.left + clickRect.width * 0.5;
-          const cy = clickRect.top + clickRect.height * 0.5;
-          pixiRef.current.spawnExplosion(cx, cy);
-        } } catch (e) { }
-      }
+      processAchievements(nextState, true);
 
       return nextState;
     });
@@ -469,19 +478,7 @@ export function useGameController() {
           stats: newStats
         };
 
-        const unlocked = checkAchievements(nextState);
-        if (unlocked.length > 0) {
-          applyAchievementRewards(nextState, unlocked);
-          nextState.achievements = [...(nextState.achievements || []), ...unlocked];
-          const newNotifs = unlocked.map(id => {
-            const def = ACHIEVEMENT_DEFS.find(d => d.id === id);
-            return { id, name: def?.name || "Unknown" };
-          });
-          setAchievementNotifs(curr => [...curr, ...newNotifs]);
-          setTimeout(() => {
-            setAchievementNotifs(curr => curr.filter(n => !newNotifs.includes(n)));
-          }, 4000);
-        }
+        processAchievements(nextState, false);
 
         saveState(nextState);
         return nextState;
