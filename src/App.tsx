@@ -10,7 +10,7 @@ import { AchievementToasts } from "./components/AchievementToasts";
 import { AchievementGallery } from "./components/AchievementGallery";
 import type { UpgradeDef } from "./types";
 import type { ArtifactDef } from "./prestige";
-import { artifactCost, costOf, isUpgradeAtMaxLevel } from "./logic";
+import { costOf, isUpgradeAtMaxLevel } from "./logic";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./components/ui/accordion";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -53,7 +53,7 @@ export default function App() {
   const handleArtifactPurchase = useCallback((def: ArtifactDef) => {
     setGame(prev => {
       const level = prev.artifacts?.[def.id] || 0;
-      const price = artifactCost(def, level);
+      const price = costOf(def, level);
       if (prev.prestigeGems < price) return prev;
       return {
         ...prev,

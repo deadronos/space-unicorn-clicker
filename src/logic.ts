@@ -61,7 +61,7 @@ export function getSkillCooldownMultiplier(game: Pick<GameSnapshot, "artifacts" 
     return 1 / (1 + resonanceLevel * 0.1);
 }
 
-export function costOf(def: UpgradeDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
+export function costOf(def: { baseCost: number, costMult: number }, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
 export function isUpgradeAtMaxLevel(def: UpgradeDef, level: number): boolean {
     return typeof def.maxLevel === 'number' && level >= def.maxLevel;
@@ -71,7 +71,6 @@ export function canPurchaseUpgrade(def: UpgradeDef, level: number): boolean {
     return !isUpgradeAtMaxLevel(def, level);
 }
 
-export function artifactCost(def: ArtifactDef, level: number) { return Math.floor(def.baseCost * Math.pow(def.costMult, level)); }
 
 export function createEmptyUpgrades(): Record<string, UpgradeState> {
     return Object.fromEntries(UPGRADE_DEFS.map((u) => [u.id, { id: u.id, level: 0 }]));
