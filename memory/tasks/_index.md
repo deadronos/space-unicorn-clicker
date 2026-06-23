@@ -2,7 +2,6 @@
 
 ## In Progress
 
-- [TASK015] Upgrade Dependencies — In Progress 2026-03-19
 - [TASK014] Active Skills (Command Bridge) — In Progress 2025-11-24
 - [TASK013] Achievement Gallery — In Progress 2025-11-24
 - [TASK001] Create tests for deriveStats and costOf — In Progress 2025-10-22
@@ -12,6 +11,7 @@
 
 ## Completed
 
+- [TASK015] Upgrade Dependencies — Completed 2026-06-23
 - [TASK016] Fix Chrono Resonance and Unicorn Stats — Completed 2026-03-22
 
 - [TASK012] Fix Warp Drive Artifact — Completed 2025-11-23
