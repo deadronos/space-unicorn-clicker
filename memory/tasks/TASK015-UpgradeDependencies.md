@@ -1,8 +1,9 @@
 # TASK015: Upgrade Dependencies and Ensure Stability
 
 ## Status
-- **Status:** In Progress
+- **Status:** Completed
 - **Started:** 2026-03-19
+- **Completed:** 2026-06-23
 - **Owner:** Jules
 
 ## Objective
@@ -26,3 +27,9 @@ Upgrade all project dependencies to their latest versions to ensure the project 
 - Fixed `Cannot find package '@pixi/core'` error in tests by installing `@pixi/core`, `@pixi/constants`, `@pixi/math`, `@pixi/settings`, and `@pixi/utils`. This was required by `@pixi/filter-glow`.
 - Verified that `npm run typecheck`, `npm test`, and `npm run build` all pass.
 - **Frontend Verification:** Ran the application and captured a screenshot with Playwright. UI renders correctly and appears functional after upgrades.
+
+### 2026-06-23
+- Re-ran `npm outdated`, then upgraded all listed dependencies to latest with `npm-check-updates`.
+- Updated manifests and lockfile (`package.json`, `package-lock.json`) and installed new versions.
+- Re-validated with `npm run typecheck`, `npm test`, and `npm run build` with all checks passing.
+- Marked TASK015 complete after dependency update and stability verification.

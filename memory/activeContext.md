@@ -4,6 +4,11 @@ Current focus: Maintaining stability while reviewing and fixing regressions (TAS
 
 Recent changes
 
+- **Dependency Upgrade Refresh (2026-06-23):**
+  - Upgraded all currently outdated dependencies to latest releases.
+  - Updated `package.json` and `package-lock.json`.
+  - Re-validated `npm run typecheck`, `npm test`, and `npm run build` successfully.
+
 - **PR40 Review Follow-up (2026-03-24):**
   - Wired Cosmic Lens into combo crit multiplier calculation.
   - Enforced `maxLevel` caps in both manual and auto-buy upgrade paths.
